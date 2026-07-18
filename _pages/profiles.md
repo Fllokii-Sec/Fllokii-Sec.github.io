@@ -1,28 +1,27 @@
 ---
-layout: profiles
-permalink: /people/
-title: people
-description: members of the lab or group
+layout: page
+permalink: /skills/
+title: skills
+description: Tools I have had hands on expierence with through courses, projects, labs, and bug bounties.
 nav: true
-nav_order: 7
+nav_order: 3
 
-profiles:
-  # if you want to include more than one profile, just replicate the following block
-  # and create one content file for each profile inside _pages/
-  - align: right
-    image: prof_pic.jpg
-    content: about_einstein.md
-    image_circular: false # crops the image to make it circular
-    more_info: >
-      <p>555 your office number</p>
-      <p>123 your address street</p>
-      <p>Your City, State 12345</p>
-  - align: left
-    image: prof_pic.jpg
-    content: about_einstein.md
-    image_circular: false # crops the image to make it circular
-    more_info: >
-      <p>555 your office number</p>
-      <p>123 your address street</p>
-      <p>Your City, State 12345</p>
----
+{% if site.data.skills %}
+  {% for section in site.data.skills %}
+    <h3 class="mt-4" style="font-weight: 600;">{{ section.category }}</h3>
+    <hr style="margin-top: 5px; margin-bottom: 20px;">
+    
+    <div class="toolbox-grid" style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 40px;">
+      {% for tool in section.tools %}
+        <div class="tool-item" style="text-align: center; width: 85px;">
+          <img src="https://img.shields.io/badge/-{{ tool.color }}?style=square&logo={{ tool.icon }}&logoColor=white" 
+               width="70" 
+               height="70" 
+               alt="{{ tool.name }}" 
+               style="border-radius: 8px;">
+          <p style="font-size: 12px; margin-top: 7px; font-weight: bold; line-height: 1.2; color: var(--global-text-color);">{{ tool.name }}</p>
+        </div>
+      {% endfor %}
+    </div>
+  {% endfor %}
+{% endif %}
