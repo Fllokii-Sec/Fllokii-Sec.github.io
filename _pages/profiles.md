@@ -14,11 +14,11 @@ order: 4
     <div class="toolbox-grid" style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 40px;">
       {% for tool in section.tools %}
         <div class="tool-item" style="text-align: center; width: 85px;">
-          <img src="https://img.shields.io/badge/-{{ tool.color }}?style=square&logo={{ tool.icon }}&logoColor=white" 
-               width="70" 
-               height="70" 
-               alt="{{ tool.name }}" 
-               style="border-radius: 8px;">
+          <img src="https://img.shields.io/badge/-{{ tool.name | url_encode }}-{{ tool.color }}?style=square&logo={{ tool.icon | url_encode }}&logoColor=white" 
+     width="70" 
+     height="70" 
+     alt="{{ tool.name }}" 
+     style="border-radius: 8px;">
           <p style="font-size: 12px; margin-top: 7px; font-weight: bold; line-height: 1.2; color: var(--global-text-color);">{{ tool.name }}</p>
         </div>
       {% endfor %}
