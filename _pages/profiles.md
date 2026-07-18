@@ -1,10 +1,10 @@
 ---
 layout: page
-permalink: /skills/
-title: skills
-description: Tools I have had hands on expierence with through courses, projects, labs, and bug bounties.
+title: toolbox
+permalink: /toolbox/
 nav: true
-nav_order: 3
+order: 3
+---
 
 {% if site.data.skills %}
   {% for section in site.data.skills %}
