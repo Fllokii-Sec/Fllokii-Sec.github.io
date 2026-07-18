@@ -2,14 +2,14 @@
 layout: about
 title: about
 permalink: /
-subtitle: <a href='#'>Affiliations</a>. Address. Contacts. Motto. Etc.
+subtitle: 
 
 profile:
   align: right
   image: prof_pic.jpg
   image_circular: false # crops the image to make it circular
   more_info: >
-    <p>kidd.gomez@proton.mailr</p>
+    <p>kidd.gomez@proton.me/p>
     
 selected_papers: true # includes a list of papers marked as "selected={true}"
 social: true # includes social icons at the bottom of the page
@@ -36,9 +36,12 @@ Over the past year I've worked through entry level certifications like Google Pr
 Beyond structured coursework, I run my own home lab to get practice that certifications alone can't give me:
 
 
-Threat detection & defense — I deployed a T-Pot honeypot on Ubuntu Server to capture live attack traffic, and use the ELK stack (Elasticsearch, Logstash, Kibana) to analyze and visualize what's hitting it in real time.
-Soc homelab - I deployed Wazuh (SIEM) integrated with suricata, sysmon, pfsense, and virustotal to monitor logs on a windows agent through a simulated SSH brute force attack and malware download.
-Web Application Firewall - I configured an WAF on a vulnerable application and simulated web attacks, then configured the firewall to bloack those same attacks.
+  - Threat detection & defense — I deployed a T-Pot honeypot on Ubuntu Server to capture live attack traffic, and use the ELK stack (Elasticsearch, Logstash,
+   Kibana) to analyze and visualize what's hitting it in real time.
+
+  - Soc homelab - I deployed Wazuh (SIEM) integrated with suricata, sysmon, pfsense, and virustotal to monitor logs on a windows agent through a simulated SSH         brute force attack and malware download.
+
+  - Web Application Firewall - I configured an WAF on a vulnerable application and simulated web attacks, then configured the firewall to bloack those same            attacks.
 
 
 I don't just spin these labs up and walk away — I actively work in them, analyzing samples and traffic the way I'd need to on the job, not just standing up infrastructure and calling it done.
