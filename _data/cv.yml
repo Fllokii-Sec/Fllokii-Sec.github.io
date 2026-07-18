@@ -10,11 +10,13 @@ cv:
       username: fllokii-sec
     - network: LinkedIn
       username: kidd-gomez
+ 
   sections:
     Education:
       - institution: Oklahoma City University
         location: Oklahoma, US
         area: Bachelor of Science
+   
     Experience:
       - company: Bixby & Harrah Public Schools
         position: Middle School Science Teacher & Wrestling Coach
@@ -65,8 +67,7 @@ cv:
     Projects:
       - name: Multi-Honeypot AWS Deployment (T-Pot)
         summary: Deployed an all-in-one cloud threat intelligence platform utilizing T-Pot over Amazon Web Services to aggregate, monitor, and analyze containerized live network threat telemetry.
-        
-
+      
       - name: Local WAF & Web Application Security Lab
         summary: Configured and deployed a local Damn Vulnerable Web Application (DVWA) on an Ubuntu VM protected by a SafeLine Web Application Firewall to test, log, and prevent SQLi and XSS exploits.
 
@@ -76,5 +77,4 @@ cv:
        - title: Oklahoma Coaches Association Assistant Coach Of The Year
        
    
-        icon: fa-solid fa-user-check
-        reference: Professional character references, including leadership evaluations from academic and federal supervisors, can be provided to verify operational integrity and technical aptitude.
+        
