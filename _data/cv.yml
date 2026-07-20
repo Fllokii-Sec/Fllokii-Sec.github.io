@@ -1,11 +1,9 @@
 cv:
   name: Kidd Gomez
-  label: Cybersecurity Specialist / Systems Administrator
-  email: kidd.gomez@example.com
+  label: Aspiring Cyber Security Professional
+  email: kidd.gomez@proton.me
   summary: My passion for Cyber Security has led me on a journey to transistion my carrer and chase my dream to become a cyber security proffesional, and I am now eager to transition into this field, specifically aiming to join a Security Operations Center (SOC) as a Tier 1 Analyst or a Junior Pentester.
   social_networks:
-    - network: X
-      username: KiddGomez
     - network: GitHub
       username: fllokii-sec
     - network: LinkedIn
