@@ -1,11 +1,11 @@
 ---
 layout: page
-title: project 3 with very long name
-description: a project that redirects to another website
+title: project Letsdefend SOC342
+description: SOC#$@
 img: assets/img/7.jpg
 redirect: https://www.wikipedia.org/
 importance: 3
-category: work
+category: THM/CTF/Write Up's
 ---
 # Incident Write-Up: SharePoint ToolShell Auth Bypass & RCE (CVE-2025-53770)
 
