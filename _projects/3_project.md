@@ -1,7 +1,7 @@
 ---
 layout: page
 title: project Letsdefend SOC342
-description: SOC#$@
+description: SOC342
 img: assets/img/7.jpg
 redirect: https://www.wikipedia.org/
 importance: 3
