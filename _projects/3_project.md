@@ -3,7 +3,6 @@ layout: page
 title: Letsdefend SOC342
 description: SOC342
 img: assets/img/7.jpg
-redirect: https://www.wikipedia.org/
 importance: 3
 category: THM/CTF/Write Up's
 ---
