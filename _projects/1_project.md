@@ -2,7 +2,7 @@
 layout: page
 title: SOC Homelab
 description: Wazuh Siem integrated with pfsense, sysmon, suricata, and VirusTotal, with simulation attack.
-img: assets/img/download (3).png
+img: assets/img/download (3).jpg
 importance: 1
 category: Home Lab
 related_publications: true
