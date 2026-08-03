@@ -31,7 +31,7 @@ category: THM/CTF/Write Up's
 ---
 ## 1. Pre-Investigation
 
-<img width="1920" height="1032" alt="chrome_PoY5DEySf0" src="https://github.com/user-attachments/assets/3e20d2c4-45bc-4dd9-8e48-ebbe7feb7241" />
+<img src="https://github.com/user-attachments/assets/3e20d2c4-45bc-4dd9-8e48-ebbe7feb7241" alt="Pre-Investigation Triage" class="img-fluid rounded z-depth-1" style="margin: 1.5rem 0;" />
 
 
 The first thing I did was make sure to note down in notepad of the source IP, Destination IP, Hostname, HTTP Request Method, and USER-Agent for future reference so I wouldn't have to keep going back to check.
@@ -44,8 +44,7 @@ Successful exploitation results in **Remote Code Execution (RCE)** executed dire
 
 I Checked the NVD for CVE-2025-53770 so i could get a better understanding of the vulnerability that i was investigating.
 
-
-<img width="1722" height="777" alt="chrome_w9AAV4LmA4" src="https://github.com/user-attachments/assets/f239dbea-5067-4502-897d-c91542c9ece3" />
+<img src="https://github.com/user-attachments/assets/f239dbea-5067-4502-897d-c91542c9ece3" alt="NVD CVE-2025-53770 Context" class="img-fluid rounded z-depth-1" style="margin: 1.5rem 0;" />
 
 
 ---
@@ -61,8 +60,7 @@ I Checked the NVD for CVE-2025-53770 so i could get a better understanding of th
   * After I checked network logs I, seen attacker IP (107.191.58.76) revealed HTTP traffic directed at SharePoint01:Request Type: HTTP POST  Target Endpoint: /_layouts/15/ToolPane.aspx?DisplayMode=Edit
   * Vulnerability Context (CVE-2025-53770):The combination of the POST payload to ToolPane.aspx along with the manipulated SignOut.aspx referer bypasses SharePoint's authentication checks (ToolShell flaw).  This grant allowed the remote attacker to drop ASPX files into the web root without authenticating.
 
-<img width="1426" height="690" alt="chrome_QSRrIk8qM9" src="https://github.com/user-attachments/assets/bf8e0b58-f133-4ee0-bd63-d785d6607872" />
-
+<img src="https://github.com/user-attachments/assets/bf8e0b58-f133-4ee0-bd63-d785d6607872" alt="Process Behavioral Analysis" class="img-fluid rounded z-depth-1" style="max-width: 90%; display: block; margin: 1rem auto; box-shadow: 0 4px 15px rgba(0,0,0,0.2);" />
 
 | Anomaly | Description |
 |---------|-------------|
@@ -84,11 +82,9 @@ Analyzing EDR/Endpoint process trees and command lines on `SharePoint01` confirm
    
 ## Scripts in order
 
-<img width="1885" height="780" alt="chrome_U4WwOObrH0" src="https://github.com/user-attachments/assets/82056b2a-c37e-45ac-907a-3d317f8901b6" />
+<img src="https://github.com/user-attachments/assets/82056b2a-c37e-45ac-907a-3d317f8901b6" alt="PowerShell Script Analysis 1" class="img-fluid rounded z-depth-1" style="margin: 1rem 0;" />
 
-<img width="1871" height="774" alt="chrome_A8J7cd8tB6" src="https://github.com/user-attachments/assets/d28026db-33a8-4921-9491-95f6397bec76" />
-
-<img width="1920" height="1032" alt="chrome_XQA83WInbv" src="https://github.com/user-attachments/assets/f457b30c-50e1-481b-947a-6f46decf0f03" />
+<img src="https://github.com/user-attachments/assets/f457b30c-50e1-481b-947a-6f46decf0f03" alt="Decoded CyberChef Output" class="img-fluid rounded z-depth-1" style="margin: 1rem 0;" />
 
 After encoxded using cyberchef
 <script runat="server" language="c#">
@@ -101,6 +97,9 @@ public void Page_load()
     Response.Write(cg.ValidationKey + "|" + cg.Validation + "|" + cg.DecryptionKey + "|" + cg.Decryption + "|" + cg.CompatibilityMode);
 }
 </script>
+
+<img src="https://github.com/user-attachments/assets/2eef18bc-36cd-4b2d-a1b8-9cfb49402778" alt="PowerShell Script Analysis 2" class="img-fluid rounded z-depth-1" style="margin: 1rem 0;" />
+
 
 ### Step 4. MachineKey Extraction & Credential Harvesting
 
@@ -138,10 +137,9 @@ The command reconstructed from EDR logs generated `spinstall0.aspx` directly in 
 
 * To make sure APSX file is malicious we checked Virus Total and Threat Detection Tab.
 
-<img width="1920" height="1032" alt="chrome_6ytWBq4csx" src="https://github.com/user-attachments/assets/01f86581-e68d-4667-a9ab-5df46120bde6" />
+<img src="https://github.com/user-attachments/assets/01f86581-e68d-4667-a9ab-5df46120bde6" alt="VirusTotal Detection Verification" class="img-fluid rounded z-depth-1" style="margin: 1rem 0;" />
 
-<img width="1853" height="375" alt="chrome_g43z1fiJUP" src="https://github.com/user-attachments/assets/cf87961b-51fe-47eb-a6df-47f52b17c896" />
-
+<img src="https://github.com/user-attachments/assets/cf87961b-51fe-47eb-a6df-47f52b17c896" alt="LetsDefend Threat Detection Tab" class="img-fluid rounded z-depth-1" style="margin: 1rem 0;" />
 
 
 ---
@@ -166,8 +164,7 @@ The command reconstructed from EDR logs generated `spinstall0.aspx` directly in 
 
 ## Artifacts and Reporting
 
-<img width="1750" height="824" alt="chrome_8Pj0AUvLsl" src="https://github.com/user-attachments/assets/a10c614d-1be8-4cb6-b51e-e07991bda0a3" />
-
+<img src="https://github.com/user-attachments/assets/a10c614d-1be8-4cb6-b51e-e07991bda0a3" alt="CyberChef Decoding & Payload Analysis" class="img-fluid rounded z-depth-1" style="max-width: 90%; display: block; margin: 1rem auto; box-shadow: 0 4px 15px rgba(0,0,0,0.2);" />
 ---
 
 ## Defensive Recommendations
@@ -185,5 +182,5 @@ Key Takeaways & Analyst Reflections
 Investigating this incident provided valuable practical experience in analyzing complex post-exploitation behaviors associated with CVE-2025-53770. Deconstructing the attack chain—from initial HTTP authentication bypass to memory key extraction and web shell creation underscores the critical necessity of rapid patch management for public facing enterprise assets. Hands-on scenarios like this on platform tools like LetsDefend continue to sharpen my threat analysis, log reconstruction, and incident handling capabilities as I prepare for a SOC Analyst role.
 
 
-<img width="1429" height="667" alt="chrome_MVTNeoPWRu" src="https://github.com/user-attachments/assets/687dc006-2a6f-4078-89d1-036ad0d33158" />
+<img src="https://github.com/user-attachments/assets/687dc006-2a6f-4078-89d1-036ad0d33158" alt="Email" class="img-fluid rounded z-depth-1" style="margin: 1rem 0;" /> />
 
