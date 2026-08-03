@@ -2,7 +2,7 @@
 layout: page
 title: Letsdefend SOC342
 description: SOC342
-img: assets/img/7.jpg
+img: assets/img/download (2).png
 importance: 3
 category: THM/CTF/Write Up's
 ---
