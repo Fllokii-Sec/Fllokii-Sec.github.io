@@ -2,7 +2,7 @@
 layout: page
 title: Web Application Firewall
 description: Simulated attacks on DVWA, the configured WAF to detect and block the attacks.
-img: assets/img/3.jpg
+img: assets/img/download.png
 importance: 2
 category: Home Lab
 giscus_comments: true
