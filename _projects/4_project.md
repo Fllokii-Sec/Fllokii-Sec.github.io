@@ -1,6 +1,6 @@
 ---
 layout: page
-title: Hacker Holliday's Day 1-7
+title: Hacker Holiday's Day 1-7
 description: Day 1-7 Write-up's
 img: THM.jpg
 importance: 3
