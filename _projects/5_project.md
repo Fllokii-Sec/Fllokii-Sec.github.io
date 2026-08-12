@@ -7,6 +7,13 @@ importance: 3
 category: fun
 ---
 
+| **Day 8** | The Brochure | PDF Generation Server-Side Request Forgery (SSRF) | `Burp Suite`, Web Browser | Medium |
+| **Day 9** | CryptoCabana | Azure Blob SAS Token & Key Vault Historical Secret Versioning | `Azure CLI`, Browser DevTools | Medium |
+
+
+
+---
+
 ## Day 8: # Towel on the Sunbed
 
 * **Category:** Web Application Security
