@@ -1,7 +1,7 @@
 ---
 layout: page
 title: Hacker Holliday's Day 1-7
-description: another without an image
+description: Day 1-7 Write-up's
 img: THM.jpg
 importance: 3
 category: THM/CTF/Write Up's
