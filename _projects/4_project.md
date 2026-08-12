@@ -81,7 +81,7 @@ ref: refs/heads/main
 
 This confirms that the server's .git directory is exposed and points to the main branch.
 
-###Step 2: Validating Git Reference Access
+### Step 2: Validating Git Reference Access
 Usingcurl, I request the reference object for the main branch to inspect the commit history pointer:
 
 ```bash
@@ -92,7 +92,7 @@ curl http://<TARGET_IP>:8080/.git/refs/heads/main
 Output:
 The request successfully returns the latest commit identifier hash, confirming that Git metadata objects are readable without authentication.
 
-###Step 3: Dumping and Reconstructing the Repository
+### Step 3: Dumping and Reconstructing the Repository
 Rather than manually fetching individual Git objects, I used git-dumper to automatically download and rebuild the entire repository structure.
 
 ```bash
@@ -107,7 +107,7 @@ Once the repository download completes, I navigated into the downloaded director
 cd repo
 find . -maxdepth 2 -type f
 ```
-###Step 4: Retrieving the Flag
+### Step 4: Retrieving the Flag
 Inspect the recovered project files (specifically README.md):
 
 ```bash
@@ -116,7 +116,7 @@ cat README.md
 
 <img width="616" height="138" alt="vmware_coO7BtxJDq" src="https://github.com/user-attachments/assets/d04a38c6-58d1-4dfe-8b09-12fde237079d" />
 
-###Remediation & Key Takeaways
+### Remediation & Key Takeaways
 Restrict Access to .git: Ensure sensitive version control directories (like .git, .svn, .hg) are blocked via web server configuration (e.g., Nginx location ~ /\.git, Apache <DirectoryMatch "/\.git"> Require all denied </DirectoryMatch>).
 
 Clean Build Deployments: Do not deploy full git working copies directly to public web roots. Use automated CI/CD pipelines to copy only built web assets.
